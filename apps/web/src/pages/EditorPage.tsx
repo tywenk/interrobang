@@ -4,6 +4,7 @@ import { getStorage } from '../services/storage';
 import { useProjectStore } from '../stores/project-store';
 import { EditorShell } from '../components/EditorShell';
 import { TabBar } from '../components/TabBar';
+import { useEditorKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { scheduleSave } from '../services/save-loop';
 import { newId } from '@interrobang/core';
 import type { Font } from '@interrobang/core';
@@ -13,6 +14,8 @@ export function EditorPage() {
   const addOpenProject = useProjectStore((s) => s.addOpenProject);
   const open = useProjectStore((s) => s.openProjects[projectId]);
   const [error, setError] = useState<string | null>(null);
+
+  useEditorKeyboardShortcuts(projectId);
 
   useEffect(() => {
     if (open) return;
