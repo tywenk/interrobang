@@ -50,11 +50,9 @@ export function EditorShell({ projectId, canvasHandleRef }: Props) {
   const currentGlyph = activeGlyph;
 
   return (
-    <div className="flex-1 relative">
+    <div className="absolute inset-0">
       <EditorCanvas
         ref={canvasRef}
-        width={800}
-        height={600}
         initialGlyph={currentGlyph}
         onCommitMove={(pointIds, dx, dy) => {
           const layer = currentGlyph.layers[0];

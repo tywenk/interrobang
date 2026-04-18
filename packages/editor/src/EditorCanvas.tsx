@@ -1,4 +1,4 @@
-import { useEffect, useImperativeHandle, useRef, forwardRef } from 'react';
+import { useEffect, useImperativeHandle, useLayoutEffect, useRef, forwardRef } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import type { Glyph } from '@interrobang/core';
 import { Viewport } from './viewport.js';
@@ -23,19 +23,17 @@ export interface EditorCanvasHandle {
 }
 
 export interface EditorCanvasProps {
-  width: number;
-  height: number;
   initialGlyph: Glyph;
   onCommitMove?: (pointIds: readonly string[], dx: number, dy: number) => void;
   onSelectionChange?: (ids: ReadonlySet<string>) => void;
   onPenClick?: (fontX: number, fontY: number) => void;
 }
 
+const INITIAL_SIZE = { width: 800, height: 600 };
+
 export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
-  function EditorCanvas(
-    { width, height, initialGlyph, onCommitMove, onSelectionChange, onPenClick },
-    ref,
-  ) {
+  function EditorCanvas({ initialGlyph, onCommitMove, onSelectionChange, onPenClick }, ref) {
+    const containerRef = useRef<HTMLDivElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const stateRef = useRef({
       glyph: initialGlyph,
@@ -48,8 +46,12 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
         lastDx: number;
         lastDy: number;
       },
+      fitted: false,
     });
-    const viewportRef = useRef(new Viewport({ canvasWidth: width, canvasHeight: height }));
+    const viewportRef = useRef(
+      new Viewport({ canvasWidth: INITIAL_SIZE.width, canvasHeight: INITIAL_SIZE.height }),
+    );
+    const sizeRef = useRef({ ...INITIAL_SIZE, dpr: 1 });
     const liveListenersRef = useRef(new Set<LiveEditListener>());
     const rafRef = useRef<number | null>(null);
 
@@ -57,17 +59,65 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
       if (rafRef.current !== null) return;
       rafRef.current = requestAnimationFrame(() => {
         rafRef.current = null;
-        const ctx = canvasRef.current?.getContext('2d');
-        if (!ctx) return;
-        ctx.clearRect(0, 0, width, height);
+        const canvas = canvasRef.current;
+        const ctx = canvas?.getContext('2d');
+        if (!ctx || !canvas) return;
+        const { dpr } = sizeRef.current;
+        // Reset transform, clear the backing store in bitmap pixels, then
+        // scale so subsequent drawing code works in CSS pixels.
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         const layer = stateRef.current.glyph.layers[0];
         if (layer) drawLayer(ctx, layer, viewportRef.current, stateRef.current.selection);
       });
     }
 
+    function applySize(cssWidth: number, cssHeight: number): void {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const dpr = window.devicePixelRatio || 1;
+      const bitmapW = Math.max(1, Math.round(cssWidth * dpr));
+      const bitmapH = Math.max(1, Math.round(cssHeight * dpr));
+      if (canvas.width !== bitmapW) canvas.width = bitmapW;
+      if (canvas.height !== bitmapH) canvas.height = bitmapH;
+      canvas.style.width = `${cssWidth}px`;
+      canvas.style.height = `${cssHeight}px`;
+      sizeRef.current = { width: cssWidth, height: cssHeight, dpr };
+      viewportRef.current.resize(cssWidth, cssHeight);
+      if (!stateRef.current.fitted) {
+        viewportRef.current.fitToGlyph(stateRef.current.glyph);
+        stateRef.current.fitted = true;
+      }
+      scheduleDraw();
+    }
+
+    useLayoutEffect(() => {
+      const container = containerRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      applySize(rect.width || INITIAL_SIZE.width, rect.height || INITIAL_SIZE.height);
+      const ro = new ResizeObserver((entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+        const cr = entry.contentRect;
+        applySize(cr.width, cr.height);
+      });
+      ro.observe(container);
+      return () => ro.disconnect();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     useImperativeHandle(ref, () => ({
       setGlyph(glyph) {
+        const prevId = stateRef.current.glyph.id;
         stateRef.current.glyph = glyph;
+        // Auto-fit when the active glyph identity changes so incoming content
+        // is always on-screen. Repeat calls with the same glyph (e.g. applying
+        // a command) preserve the current viewport.
+        if (glyph.id !== prevId) {
+          viewportRef.current.fitToGlyph(glyph);
+        }
         scheduleDraw();
       },
       setSelection(ids) {
@@ -78,7 +128,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
         stateRef.current.tool = tool;
       },
       fitToView() {
-        viewportRef.current = new Viewport({ canvasWidth: width, canvasHeight: height });
+        viewportRef.current.fitToGlyph(stateRef.current.glyph);
         scheduleDraw();
       },
       on(_event, cb) {
@@ -88,11 +138,6 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
         };
       },
     }));
-
-    useEffect(() => {
-      scheduleDraw();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [width, height]);
 
     function emitLive(e: LiveEditEvent): void {
       for (const cb of liveListenersRef.current) cb(e);
@@ -147,12 +192,7 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
       const stepDy = dy - drag.lastDy;
       drag.lastDx = dx;
       drag.lastDy = dy;
-      stateRef.current.glyph = previewMove(
-        stateRef.current.glyph,
-        drag.pointIds,
-        stepDx,
-        stepDy,
-      );
+      stateRef.current.glyph = previewMove(stateRef.current.glyph, drag.pointIds, stepDx, stepDy);
       emitLive({ kind: 'point-drag', pointIds: drag.pointIds, dx, dy });
       scheduleDraw();
     }
@@ -166,16 +206,17 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
     }
 
     return (
-      <canvas
-        ref={canvasRef}
-        width={width}
-        height={height}
-        onMouseDown={onMouseDown}
-        onMouseMove={onMouseMove}
-        onMouseUp={onMouseUp}
-        onMouseLeave={onMouseUp}
-        className="editor-canvas"
-      />
+      <div ref={containerRef} className="w-full h-full relative">
+        <canvas
+          ref={canvasRef}
+          onMouseDown={onMouseDown}
+          onMouseMove={onMouseMove}
+          onMouseUp={onMouseUp}
+          onMouseLeave={onMouseUp}
+          className="editor-canvas block"
+          style={{ touchAction: 'none' }}
+        />
+      </div>
     );
   },
 );
