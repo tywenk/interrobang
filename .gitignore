@@ -1,0 +1,27 @@
+# Brainstorming companion artifacts
+.superpowers/
+
+# Bun / Node
+node_modules/
+bun.lockb
+*.log
+.DS_Store
+
+# Build output
+dist/
+build/
+.cache/
+.turbo/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# OS
+Thumbs.db
