@@ -3,6 +3,7 @@ import { projectRoute } from '../routes/project';
 import { getStorage } from '../services/storage';
 import { useProjectStore } from '../stores/project-store';
 import { EditorShell } from '../components/EditorShell';
+import { TabBar } from '../components/TabBar';
 import { scheduleSave } from '../services/save-loop';
 import { newId } from '@interrobang/core';
 import type { Font } from '@interrobang/core';
@@ -91,8 +92,11 @@ export function EditorPage() {
 
   if (error) return <div className="p-6 text-destructive">{error}</div>;
   return (
-    <div className="h-screen w-screen flex">
-      <EditorShell projectId={projectId} />
+    <div className="h-screen w-screen flex flex-col">
+      <TabBar activeId={projectId} />
+      <div className="flex-1 relative">
+        <EditorShell projectId={projectId} />
+      </div>
     </div>
   );
 }
