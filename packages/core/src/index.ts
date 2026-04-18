@@ -7,3 +7,4 @@ export { UndoRedoStack } from './commands/command.js';
 export {
   movePointsCommand, insertPointCommand, removePointCommand, convertPointTypeCommand,
 } from './commands/font-commands.js';
+export { emptyFont, updateGlyph, replaceLayer } from './ops/glyph-ops.js';
