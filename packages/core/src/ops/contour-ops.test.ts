@@ -1,6 +1,6 @@
 import { test, expect } from 'bun:test';
 import type { Contour, Point } from '../contour.js';
-import { insertPoint, removePoint } from './contour-ops.js';
+import { convertPointType, insertPoint, movePoints, removePoint } from './contour-ops.js';
 
 const p = (id: string, x: number, y: number, type: Point['type'] = 'line'): Point => ({
   id, x, y, type, smooth: false,
@@ -41,4 +41,23 @@ test('removePoint removes by id', () => {
 test('removePoint with unknown id is a no-op', () => {
   const next = removePoint(square, 'zzz');
   expect(next).toBe(square);
+});
+
+test('movePoints translates the listed point ids', () => {
+  const next = movePoints(square, new Set(['b', 'c']), 5, -3);
+  const byId = Object.fromEntries(next.points.map((q) => [q.id, q]));
+  expect(byId.a).toEqual(square.points[0]!);
+  expect(byId.b).toMatchObject({ x: 105, y: -3 });
+  expect(byId.c).toMatchObject({ x: 105, y: 97 });
+  expect(byId.d).toEqual(square.points[3]!);
+});
+
+test('movePoints with empty set is a no-op (same reference)', () => {
+  expect(movePoints(square, new Set(), 5, 5)).toBe(square);
+});
+
+test('convertPointType changes type by id', () => {
+  const next = convertPointType(square, 'b', 'curve');
+  expect(next.points[1]!.type).toBe('curve');
+  expect(next.points[0]!.type).toBe('line');
 });
