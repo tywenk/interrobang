@@ -13,6 +13,30 @@
         "typescript": "^5.6.0",
       },
     },
+    "apps/web": {
+      "name": "@interrobang/web",
+      "version": "0.0.0",
+    },
+    "packages/core": {
+      "name": "@interrobang/core",
+      "version": "0.0.0",
+    },
+    "packages/editor": {
+      "name": "@interrobang/editor",
+      "version": "0.0.0",
+    },
+    "packages/font-io": {
+      "name": "@interrobang/font-io",
+      "version": "0.0.0",
+    },
+    "packages/schema": {
+      "name": "@interrobang/schema",
+      "version": "0.0.0",
+    },
+    "packages/storage": {
+      "name": "@interrobang/storage",
+      "version": "0.0.0",
+    },
   },
   "packages": {
     "@adobe/css-tools": ["@adobe/css-tools@4.4.4", "", {}, "sha512-Elp+iwUx5rN5+Y8xLt5/GRoG20WGoDCQ/1Fb+1LiGtvwbDavuSk0jhD/eZdckHAuzcDzccnkv+rEjyWfRx18gg=="],
@@ -42,6 +66,18 @@
     "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@1.9.4", "", { "os": "win32", "cpu": "x64" }, "sha512-8Y5wMhVIPaWe6jw2H+KlEm4wP/f7EW3810ZLmDlrEEy5KvBsb9ECEfu/kMWD484ijfQ8+nIi0giMgu9g1UAuuA=="],
 
     "@happy-dom/global-registrator": ["@happy-dom/global-registrator@20.9.0", "", { "dependencies": { "@types/node": ">=20.0.0", "happy-dom": "^20.9.0" } }, "sha512-lBW6/m5BIFl3pMuWPNN0lIOYw9LMCmPfix53ExS3FBi4E+NELEljQ3xH6aAV9IYiQRfn9YIIgzzMrD0vIcD7tw=="],
+
+    "@interrobang/core": ["@interrobang/core@workspace:packages/core"],
+
+    "@interrobang/editor": ["@interrobang/editor@workspace:packages/editor"],
+
+    "@interrobang/font-io": ["@interrobang/font-io@workspace:packages/font-io"],
+
+    "@interrobang/schema": ["@interrobang/schema@workspace:packages/schema"],
+
+    "@interrobang/storage": ["@interrobang/storage@workspace:packages/storage"],
+
+    "@interrobang/web": ["@interrobang/web@workspace:apps/web"],
 
     "@testing-library/dom": ["@testing-library/dom@10.4.1", "", { "dependencies": { "@babel/code-frame": "^7.10.4", "@babel/runtime": "^7.12.5", "@types/aria-query": "^5.0.1", "aria-query": "5.3.0", "dom-accessibility-api": "^0.5.9", "lz-string": "^1.5.0", "picocolors": "1.1.1", "pretty-format": "^27.0.2" } }, "sha512-o4PXJQidqJl82ckFaXUeoAW+XysPLauYI43Abki5hABd853iMhitooc6znOnczgbTYmEP6U6/y1ZyKAIsvMKGg=="],
 
