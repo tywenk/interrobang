@@ -3,6 +3,7 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getStorage } from '../services/storage';
+import { ImportButton } from '../components/ImportButton';
 import type { ProjectSummary } from '@interrobang/storage';
 
 export function ProjectPickerPage() {
@@ -43,6 +44,7 @@ export function ProjectPickerPage() {
       <div className="flex gap-2">
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Project name" />
         <Button onClick={create}>New project</Button>
+        <ImportButton />
       </div>
       {error && error !== 'SINGLE_TAB' && (
         <div className="text-destructive">{error}</div>
