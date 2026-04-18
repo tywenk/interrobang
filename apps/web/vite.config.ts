@@ -1,10 +1,24 @@
 import path from 'node:path';
-import { defineConfig } from 'vite';
+import { readFile } from 'node:fs/promises';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
+function sqlTextImportPlugin(): Plugin {
+  return {
+    name: 'sql-text-import',
+    enforce: 'pre',
+    async load(id) {
+      const [file] = id.split('?');
+      if (!file || !file.endsWith('.sql')) return null;
+      const text = await readFile(file, 'utf8');
+      return `export default ${JSON.stringify(text)};`;
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [sqlTextImportPlugin(), react(), tailwindcss()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
