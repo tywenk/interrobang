@@ -28,11 +28,12 @@ export interface EditorCanvasProps {
   initialGlyph: Glyph;
   onCommitMove?: (pointIds: readonly string[], dx: number, dy: number) => void;
   onSelectionChange?: (ids: ReadonlySet<string>) => void;
+  onPenClick?: (fontX: number, fontY: number) => void;
 }
 
 export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
   function EditorCanvas(
-    { width, height, initialGlyph, onCommitMove, onSelectionChange },
+    { width, height, initialGlyph, onCommitMove, onSelectionChange, onPenClick },
     ref,
   ) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -103,6 +104,13 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
       const sy = e.clientY - rect.top;
       const layer = stateRef.current.glyph.layers[0];
       if (!layer) return;
+
+      if (stateRef.current.tool === 'pen') {
+        const fontPt = viewportRef.current.screenToFont(sx, sy);
+        onPenClick?.(fontPt.x, fontPt.y);
+        return;
+      }
+
       const hit = hitTest(layer, viewportRef.current, sx, sy, 8);
       if (hit && hit.kind === 'point') {
         const ids = stateRef.current.selection.has(hit.pointId)
