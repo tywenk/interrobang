@@ -4,3 +4,6 @@ export type { Font, FontMeta, Master, KerningPair } from './font.js';
 export { newId } from './id.js';
 export type { Command } from './commands/command.js';
 export { UndoRedoStack } from './commands/command.js';
+export {
+  movePointsCommand, insertPointCommand, removePointCommand, convertPointTypeCommand,
+} from './commands/font-commands.js';
