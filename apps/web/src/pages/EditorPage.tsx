@@ -1,19 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { projectRoute } from '../routes/project';
 import { getStorage } from '../services/storage';
 import { useProjectStore } from '../stores/project-store';
 import { EditorShell } from '../components/EditorShell';
 import { TabBar } from '../components/TabBar';
+import { GlyphList } from '../components/GlyphList';
+import { CoordinatesPanel } from '../components/CoordinatesPanel';
 import { useEditorKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { scheduleSave } from '../services/save-loop';
 import { newId } from '@interrobang/core';
 import type { Font } from '@interrobang/core';
+import type { EditorCanvasHandle } from '@interrobang/editor';
 
 export function EditorPage() {
   const { projectId } = projectRoute.useParams();
   const addOpenProject = useProjectStore((s) => s.addOpenProject);
   const open = useProjectStore((s) => s.openProjects[projectId]);
   const [error, setError] = useState<string | null>(null);
+  const canvasHandleRef = useRef<EditorCanvasHandle | null>(null);
 
   useEditorKeyboardShortcuts(projectId);
 
@@ -97,8 +101,12 @@ export function EditorPage() {
   return (
     <div className="h-screen w-screen flex flex-col">
       <TabBar activeId={projectId} />
-      <div className="flex-1 relative">
-        <EditorShell projectId={projectId} />
+      <div className="flex-1 flex">
+        <GlyphList projectId={projectId} />
+        <div className="flex-1 relative">
+          <EditorShell projectId={projectId} canvasHandleRef={canvasHandleRef} />
+        </div>
+        <CoordinatesPanel canvasRef={canvasHandleRef} />
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
+import type { RefObject } from 'react';
 import type { Glyph } from '@interrobang/core';
 import { movePointsCommand, insertPointCommand, newId } from '@interrobang/core';
 import { EditorCanvas, type EditorCanvasHandle } from '@interrobang/editor';
@@ -9,9 +10,10 @@ import { ExportButton } from './ExportButton';
 
 interface Props {
   projectId: string;
+  canvasHandleRef?: RefObject<EditorCanvasHandle | null>;
 }
 
-export function EditorShell({ projectId }: Props) {
+export function EditorShell({ projectId, canvasHandleRef }: Props) {
   const proj = useProjectStore((s) => s.openProjects[projectId]);
   const applyCommand = useProjectStore((s) => s.applyCommand);
   const undo = useProjectStore((s) => s.undo);
@@ -19,7 +21,8 @@ export function EditorShell({ projectId }: Props) {
   const tool = useEditorStore((s) => s.tool);
   const setSelection = useEditorStore((s) => s.setSelection);
 
-  const canvasRef = useRef<EditorCanvasHandle | null>(null);
+  const internalRef = useRef<EditorCanvasHandle | null>(null);
+  const canvasRef = canvasHandleRef ?? internalRef;
 
   const activeGlyph: Glyph | null = useMemo(() => {
     if (!proj) return null;
