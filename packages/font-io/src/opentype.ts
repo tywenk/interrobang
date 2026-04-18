@@ -75,3 +75,70 @@ function pathToLayer(path: opentype.Path, masterId: string): Layer {
   return { id: newId(), masterId, contours, components: [], anchors: [] };
 }
 
+export function writeOTF(font: Font): ArrayBuffer {
+  const otGlyphs: opentype.Glyph[] = [];
+  // .notdef is required as the first glyph
+  otGlyphs.push(
+    new opentype.Glyph({
+      name: '.notdef',
+      unicode: 0,
+      advanceWidth: font.meta.unitsPerEm / 2,
+      path: new opentype.Path(),
+    }),
+  );
+  for (const id of font.glyphOrder) {
+    const g = font.glyphs[id]!;
+    if (g.name === '.notdef') continue;
+    otGlyphs.push(
+      new opentype.Glyph({
+        name: g.name,
+        unicode: g.unicodeCodepoint ?? undefined,
+        advanceWidth: g.advanceWidth,
+        path: layerToPath(g.layers[0]!),
+      }),
+    );
+  }
+  const ot = new opentype.Font({
+    familyName: font.meta.familyName,
+    styleName: font.meta.styleName,
+    unitsPerEm: font.meta.unitsPerEm,
+    ascender: font.meta.ascender,
+    descender: font.meta.descender,
+    glyphs: otGlyphs,
+  });
+  return ot.toArrayBuffer();
+}
+
+function layerToPath(layer: Layer): opentype.Path {
+  const path = new opentype.Path();
+  for (const contour of layer.contours) {
+    let started = false;
+    let i = 0;
+    while (i < contour.points.length) {
+      const p = contour.points[i]!;
+      if (!started) {
+        path.moveTo(p.x, p.y);
+        started = true;
+        i += 1;
+        continue;
+      }
+      if (p.type === 'line') {
+        path.lineTo(p.x, p.y);
+        i += 1;
+      } else if (p.type === 'qcurve') {
+        const c = contour.points[i - 1]!;
+        path.quadraticCurveTo(c.x, c.y, p.x, p.y);
+        i += 1;
+      } else if (p.type === 'curve') {
+        const c1 = contour.points[i - 2]!;
+        const c2 = contour.points[i - 1]!;
+        path.curveTo(c1.x, c1.y, c2.x, c2.y, p.x, p.y);
+        i += 1;
+      } else {
+        i += 1; // skip raw offcurves; handled above
+      }
+    }
+    if (contour.closed) path.close();
+  }
+  return path;
+}
