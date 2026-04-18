@@ -86,7 +86,9 @@ function bindParams(stmt: number, params: SqlValue[]): void {
     } else if (typeof p === 'string') {
       api.bind_text(stmt, idx, p);
     } else if (typeof p === 'number') {
-      if (Number.isInteger(p)) api.bind_int(stmt, idx, p);
+      // bind_int is 32-bit and silently fails on values like Date.now().
+      // Use bind_int64 for integers (takes BigInt) and bind_double otherwise.
+      if (Number.isInteger(p)) api.bind_int64(stmt, idx, BigInt(p));
       else api.bind_double(stmt, idx, p);
     } else {
       api.bind_blob(stmt, idx, p);
@@ -100,8 +102,10 @@ function readRow(stmt: number): Row {
   for (let i = 0; i < colCount; i++) {
     const name: string = api.column_name(stmt, i);
     const type: number = api.column_type(stmt, i);
-    if (type === SQLite.SQLITE_INTEGER) out[name] = api.column_int(stmt, i);
-    else if (type === SQLite.SQLITE_FLOAT) out[name] = api.column_double(stmt, i);
+    if (type === SQLite.SQLITE_INTEGER) {
+      const v = api.column_int64(stmt, i);
+      out[name] = typeof v === 'bigint' ? Number(v) : (v as number);
+    } else if (type === SQLite.SQLITE_FLOAT) out[name] = api.column_double(stmt, i);
     else if (type === SQLite.SQLITE_TEXT) out[name] = api.column_text(stmt, i);
     else if (type === SQLite.SQLITE_BLOB) out[name] = api.column_blob(stmt, i);
     else out[name] = null;
