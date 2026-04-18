@@ -13,3 +13,5 @@ export type KerningPairRow = InferSelectModel<typeof t.kerningPairs>;
 export type FeatureRow = InferSelectModel<typeof t.features>;
 export type ProjectBlobRow = InferSelectModel<typeof t.projectBlobs>;
 export type SyncLogRow = InferSelectModel<typeof t.syncLog>;
+
+export { getClientDDL, getServerDDL, MIGRATION_VERSION } from './client-ddl.js';
