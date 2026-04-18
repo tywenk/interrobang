@@ -5,6 +5,7 @@ import { EditorCanvas, type EditorCanvasHandle } from '@interrobang/editor';
 import { useProjectStore } from '../stores/project-store';
 import { useEditorStore } from '../stores/editor-store';
 import { Button } from '@/components/ui/button';
+import { ExportButton } from './ExportButton';
 
 interface Props {
   projectId: string;
@@ -96,6 +97,7 @@ export function EditorShell({ projectId }: Props) {
         <Button variant="outline" onClick={() => redo(projectId)}>
           Redo
         </Button>
+        <ExportButton projectId={projectId} />
       </div>
     </div>
   );
