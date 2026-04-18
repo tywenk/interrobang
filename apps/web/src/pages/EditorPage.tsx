@@ -3,6 +3,7 @@ import { projectRoute } from '../routes/project';
 import { getStorage } from '../services/storage';
 import { useProjectStore } from '../stores/project-store';
 import { EditorShell } from '../components/EditorShell';
+import { scheduleSave } from '../services/save-loop';
 import { newId } from '@interrobang/core';
 import type { Font } from '@interrobang/core';
 
@@ -77,6 +78,15 @@ export function EditorPage() {
     }
     document.addEventListener('interrobang:add-starter', handler);
     return () => document.removeEventListener('interrobang:add-starter', handler);
+  }, [projectId]);
+
+  useEffect(() => {
+    const unsub = useProjectStore.subscribe((s, prev) => {
+      const cur = s.openProjects[projectId];
+      const old = prev.openProjects[projectId];
+      if (cur && cur.dirty && cur !== old) scheduleSave(projectId);
+    });
+    return () => unsub();
   }, [projectId]);
 
   if (error) return <div className="p-6 text-destructive">{error}</div>;
