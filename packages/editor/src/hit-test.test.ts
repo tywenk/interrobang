@@ -1,4 +1,4 @@
-import { test, expect } from 'bun:test';
+import { test, expect } from 'vitest';
 import type { Layer } from '@interrobang/core';
 import { Viewport } from './viewport.js';
 import { hitTest } from './hit-test.js';

@@ -1,4 +1,4 @@
-import { test, expect } from 'bun:test';
+import { test, expect } from 'vitest';
 import { emptyFont } from '@interrobang/core';
 import { fontToUfo, ufoToFont } from './ufo.js';
 

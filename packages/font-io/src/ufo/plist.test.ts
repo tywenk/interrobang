@@ -1,4 +1,4 @@
-import { test, expect } from 'bun:test';
+import { test, expect } from 'vitest';
 import { parsePlist, writePlist } from './plist.js';
 
 const SAMPLE = `<?xml version="1.0" encoding="UTF-8"?>

@@ -1,9 +1,11 @@
-import { test, expect } from 'bun:test';
+import { test, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parseOTF, writeOTF } from './opentype.js';
 
-const sample = new Uint8Array(readFileSync(join(import.meta.dir, '../test-fixtures/sample.ttf')));
+const here = dirname(fileURLToPath(import.meta.url));
+const sample = new Uint8Array(readFileSync(join(here, '../test-fixtures/sample.ttf')));
 
 test('parseOTF returns a Font with a glyph map', () => {
   const font = parseOTF(sample.buffer as ArrayBuffer);

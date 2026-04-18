@@ -1,4 +1,4 @@
-import { test, expect } from 'bun:test';
+import { test, expect } from 'vitest';
 import type { Font, Layer } from '../index.js';
 import { emptyFont } from '../ops/glyph-ops.js';
 import {

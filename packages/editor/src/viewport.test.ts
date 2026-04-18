@@ -1,4 +1,4 @@
-import { test, expect } from 'bun:test';
+import { test, expect } from 'vitest';
 import { Viewport } from './viewport.js';
 
 test('default viewport maps font origin to canvas centre', () => {

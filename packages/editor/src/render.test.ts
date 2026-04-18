@@ -1,4 +1,4 @@
-import { test, expect, mock } from 'bun:test';
+import { test, expect, vi } from 'vitest';
 import type { Layer } from '@interrobang/core';
 import { Viewport } from './viewport.js';
 import { drawLayer } from './render.js';
@@ -6,17 +6,17 @@ import { drawLayer } from './render.js';
 function fakeCtx() {
   const calls: string[] = [];
   const ctx = {
-    beginPath: mock(() => calls.push('beginPath')),
-    moveTo: mock((x: number, y: number) => calls.push(`moveTo(${x},${y})`)),
-    lineTo: mock((x: number, y: number) => calls.push(`lineTo(${x},${y})`)),
-    closePath: mock(() => calls.push('closePath')),
-    stroke: mock(() => calls.push('stroke')),
-    fill: mock(() => calls.push('fill')),
-    arc: mock(() => calls.push('arc')),
-    quadraticCurveTo: mock(() => calls.push('quadraticCurveTo')),
-    bezierCurveTo: mock(() => calls.push('bezierCurveTo')),
-    save: mock(() => calls.push('save')),
-    restore: mock(() => calls.push('restore')),
+    beginPath: vi.fn(() => calls.push('beginPath')),
+    moveTo: vi.fn((x: number, y: number) => calls.push(`moveTo(${x},${y})`)),
+    lineTo: vi.fn((x: number, y: number) => calls.push(`lineTo(${x},${y})`)),
+    closePath: vi.fn(() => calls.push('closePath')),
+    stroke: vi.fn(() => calls.push('stroke')),
+    fill: vi.fn(() => calls.push('fill')),
+    arc: vi.fn(() => calls.push('arc')),
+    quadraticCurveTo: vi.fn(() => calls.push('quadraticCurveTo')),
+    bezierCurveTo: vi.fn(() => calls.push('bezierCurveTo')),
+    save: vi.fn(() => calls.push('save')),
+    restore: vi.fn(() => calls.push('restore')),
     set strokeStyle(_: string) {
       /* noop */
     },

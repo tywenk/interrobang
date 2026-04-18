@@ -1,4 +1,4 @@
-import { test, expect } from 'bun:test';
+import { test, expect } from 'vitest';
 import { newId } from './id.js';
 
 test('newId returns a 21-char nanoid', () => {
