@@ -2,6 +2,15 @@
 // without corresponding .d.ts declarations. The VFS classes are plain classes
 // (not `.create()` factories), so they're exposed here with `new` semantics.
 
+// `@interrobang/schema` imports `*.sql` as a text asset via bun's import
+// attributes. When its sources are transitively compiled from this package,
+// the ambient `*.sql` module declaration lives outside this package's
+// tsconfig include glob, so we re-declare it here.
+declare module '*.sql' {
+  const contents: string;
+  export default contents;
+}
+
 declare module 'wa-sqlite/src/examples/IDBBatchAtomicVFS.js' {
   import type { SQLiteVFS } from 'wa-sqlite';
   export class IDBBatchAtomicVFS implements SQLiteVFS {
