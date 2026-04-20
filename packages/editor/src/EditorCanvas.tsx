@@ -83,9 +83,19 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
       if (canvas.height !== bitmapH) canvas.height = bitmapH;
       canvas.style.width = `${cssWidth}px`;
       canvas.style.height = `${cssHeight}px`;
+      const prev = sizeRef.current;
       sizeRef.current = { width: cssWidth, height: cssHeight, dpr };
       viewportRef.current.resize(cssWidth, cssHeight);
-      if (!stateRef.current.fitted) {
+      // Refit on the first sizing and whenever the container grows (or shrinks)
+      // substantially — typical when the first measurement happened during a
+      // layout transition and the real size arrived via ResizeObserver.
+      const grew =
+        stateRef.current.fitted &&
+        (cssWidth > prev.width * 1.5 ||
+          cssHeight > prev.height * 1.5 ||
+          cssWidth * 1.5 < prev.width ||
+          cssHeight * 1.5 < prev.height);
+      if (!stateRef.current.fitted || grew) {
         viewportRef.current.fitToGlyph(stateRef.current.glyph);
         stateRef.current.fitted = true;
       }
@@ -108,36 +118,37 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    useImperativeHandle(ref, () => ({
-      setGlyph(glyph) {
-        const prevId = stateRef.current.glyph.id;
-        stateRef.current.glyph = glyph;
-        // Auto-fit when the active glyph identity changes so incoming content
-        // is always on-screen. Repeat calls with the same glyph (e.g. applying
-        // a command) preserve the current viewport.
-        if (glyph.id !== prevId) {
-          viewportRef.current.fitToGlyph(glyph);
-        }
-        scheduleDraw();
-      },
-      setSelection(ids) {
-        stateRef.current.selection = new Set(ids);
-        scheduleDraw();
-      },
-      setTool(tool) {
-        stateRef.current.tool = tool;
-      },
-      fitToView() {
-        viewportRef.current.fitToGlyph(stateRef.current.glyph);
-        scheduleDraw();
-      },
-      on(_event, cb) {
-        liveListenersRef.current.add(cb);
-        return () => {
-          liveListenersRef.current.delete(cb);
-        };
-      },
-    }));
+    useImperativeHandle(
+      ref,
+      () => ({
+        setGlyph(glyph) {
+          const prevId = stateRef.current.glyph.id;
+          stateRef.current.glyph = glyph;
+          if (glyph.id !== prevId) {
+            viewportRef.current.fitToGlyph(glyph);
+          }
+          scheduleDraw();
+        },
+        setSelection(ids) {
+          stateRef.current.selection = new Set(ids);
+          scheduleDraw();
+        },
+        setTool(tool) {
+          stateRef.current.tool = tool;
+        },
+        fitToView() {
+          viewportRef.current.fitToGlyph(stateRef.current.glyph);
+          scheduleDraw();
+        },
+        on(_event, cb) {
+          liveListenersRef.current.add(cb);
+          return () => {
+            liveListenersRef.current.delete(cb);
+          };
+        },
+      }),
+      [],
+    );
 
     function emitLive(e: LiveEditEvent): void {
       for (const cb of liveListenersRef.current) cb(e);

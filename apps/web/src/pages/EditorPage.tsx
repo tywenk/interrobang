@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { projectRoute } from '../routes/project';
 import { getStorage } from '../services/storage';
 import { useProjectStore } from '../stores/project-store';
+import { useEditorStore } from '../stores/editor-store';
 import { EditorShell } from '../components/EditorShell';
 import { TabBar } from '../components/TabBar';
 import { GlyphList } from '../components/GlyphList';
 import { CoordinatesPanel } from '../components/CoordinatesPanel';
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { useEditorKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { scheduleSave } from '../services/save-loop';
 import { newId } from '@interrobang/core';
@@ -17,7 +19,7 @@ export function EditorPage() {
   const addOpenProject = useProjectStore((s) => s.addOpenProject);
   const open = useProjectStore((s) => s.openProjects[projectId]);
   const [error, setError] = useState<string | null>(null);
-  const canvasHandleRef = useRef<EditorCanvasHandle | null>(null);
+  const [canvasHandle, setCanvasHandle] = useState<EditorCanvasHandle | null>(null);
 
   useEditorKeyboardShortcuts(projectId);
 
@@ -31,12 +33,28 @@ export function EditorPage() {
 
   useEffect(() => {
     function handler(e: Event) {
-      const detail = (e as CustomEvent<{ projectId: string }>).detail;
+      const detail = (e as CustomEvent<{ projectId: string; char?: string }>).detail;
       if (detail.projectId !== projectId) return;
       const current = useProjectStore.getState().openProjects[projectId];
       if (!current) return;
       const masterId = current.font.masters[0]?.id;
       if (!masterId) return;
+
+      const rawChar = (detail.char ?? 'A').trim();
+      const char = rawChar.length > 0 ? [...rawChar][0]! : 'A';
+      const codepoint = char.codePointAt(0) ?? null;
+      const existing = Object.values(current.font.glyphs);
+      const existingByCodepoint = codepoint
+        ? existing.find((g) => g.unicodeCodepoint === codepoint)
+        : undefined;
+      if (existingByCodepoint) {
+        useEditorStore.getState().setActiveGlyph(projectId, existingByCodepoint.id);
+        return;
+      }
+      const baseName = char;
+      let name = baseName;
+      for (let i = 1; existing.some((g) => g.name === name); i++) name = `${baseName}.${i}`;
+
       const layerId = newId();
       const contourId = newId();
       const glyphId = newId();
@@ -46,9 +64,9 @@ export function EditorPage() {
           ...current.font.glyphs,
           [glyphId]: {
             id: glyphId,
-            name: 'A',
+            name,
             advanceWidth: 500,
-            unicodeCodepoint: 65,
+            unicodeCodepoint: codepoint,
             revision: 0,
             layers: [
               {
@@ -74,18 +92,23 @@ export function EditorPage() {
         glyphOrder: [...current.font.glyphOrder, glyphId],
       };
       useProjectStore.setState((s) => {
-        const existing = s.openProjects[projectId];
-        if (!existing) return s;
+        const existingProj = s.openProjects[projectId];
+        if (!existingProj) return s;
         return {
           openProjects: {
             ...s.openProjects,
-            [projectId]: { ...existing, font: next, dirty: true },
+            [projectId]: { ...existingProj, font: next, dirty: true },
           },
         };
       });
+      useEditorStore.getState().setActiveGlyph(projectId, glyphId);
     }
     document.addEventListener('interrobang:add-starter', handler);
-    return () => document.removeEventListener('interrobang:add-starter', handler);
+    document.addEventListener('interrobang:add-glyph', handler);
+    return () => {
+      document.removeEventListener('interrobang:add-starter', handler);
+      document.removeEventListener('interrobang:add-glyph', handler);
+    };
   }, [projectId]);
 
   useEffect(() => {
@@ -99,15 +122,17 @@ export function EditorPage() {
 
   if (error) return <div className="p-6 text-destructive">{error}</div>;
   return (
-    <div className="h-screen w-screen flex flex-col">
-      <TabBar activeId={projectId} />
-      <div className="flex-1 flex">
-        <GlyphList projectId={projectId} />
-        <div className="flex-1 relative">
-          <EditorShell projectId={projectId} canvasHandleRef={canvasHandleRef} />
+    <SidebarProvider className="h-screen">
+      <GlyphList projectId={projectId} />
+      <SidebarInset className="flex min-w-0 flex-col">
+        <TabBar activeId={projectId} />
+        <div className="flex min-h-0 flex-1">
+          <div className="relative min-h-0 min-w-0 flex-1">
+            <EditorShell projectId={projectId} canvasHandleRef={setCanvasHandle} />
+          </div>
+          <CoordinatesPanel canvas={canvasHandle} />
         </div>
-        <CoordinatesPanel canvasRef={canvasHandleRef} />
-      </div>
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

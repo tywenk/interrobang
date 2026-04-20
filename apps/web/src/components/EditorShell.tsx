@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef } from 'react';
-import type { RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import type { Ref } from 'react';
 import type { Glyph } from '@interrobang/core';
 import { movePointsCommand, insertPointCommand, newId } from '@interrobang/core';
 import { EditorCanvas, type EditorCanvasHandle } from '@interrobang/editor';
@@ -10,7 +10,7 @@ import { ExportButton } from './ExportButton';
 
 interface Props {
   projectId: string;
-  canvasHandleRef?: RefObject<EditorCanvasHandle | null>;
+  canvasHandleRef?: Ref<EditorCanvasHandle>;
 }
 
 export function EditorShell({ projectId, canvasHandleRef }: Props) {
@@ -20,22 +20,30 @@ export function EditorShell({ projectId, canvasHandleRef }: Props) {
   const redo = useProjectStore((s) => s.redo);
   const tool = useEditorStore((s) => s.tool);
   const setSelection = useEditorStore((s) => s.setSelection);
+  const activeGlyphId = useEditorStore((s) => s.activeGlyphByProject[projectId]);
 
   const internalRef = useRef<EditorCanvasHandle | null>(null);
-  const canvasRef = canvasHandleRef ?? internalRef;
+  const setRefs = useCallback(
+    (handle: EditorCanvasHandle | null) => {
+      internalRef.current = handle;
+      if (typeof canvasHandleRef === 'function') canvasHandleRef(handle);
+      else if (canvasHandleRef) canvasHandleRef.current = handle;
+    },
+    [canvasHandleRef],
+  );
 
   const activeGlyph: Glyph | null = useMemo(() => {
     if (!proj) return null;
-    const firstId = proj.font.glyphOrder[0];
-    return firstId ? proj.font.glyphs[firstId] ?? null : null;
-  }, [proj]);
+    const id = activeGlyphId ?? proj.font.glyphOrder[0];
+    return id ? proj.font.glyphs[id] ?? null : null;
+  }, [proj, activeGlyphId]);
 
   useEffect(() => {
-    if (canvasRef.current && activeGlyph) canvasRef.current.setGlyph(activeGlyph);
+    if (internalRef.current && activeGlyph) internalRef.current.setGlyph(activeGlyph);
   }, [activeGlyph]);
 
   useEffect(() => {
-    canvasRef.current?.setTool(tool);
+    internalRef.current?.setTool(tool);
   }, [tool]);
 
   if (!proj) return <div className="p-6 text-muted-foreground">Loading project…</div>;
@@ -52,7 +60,7 @@ export function EditorShell({ projectId, canvasHandleRef }: Props) {
   return (
     <div className="absolute inset-0">
       <EditorCanvas
-        ref={canvasRef}
+        ref={setRefs}
         initialGlyph={currentGlyph}
         onCommitMove={(pointIds, dx, dy) => {
           const layer = currentGlyph.layers[0];

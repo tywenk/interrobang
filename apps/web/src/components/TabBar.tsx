@@ -1,6 +1,8 @@
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useProjectStore } from '../stores/project-store';
 import { Button } from '@/components/ui/button';
+import { SidebarTrigger } from '@/components/ui/sidebar';
+import { Separator } from '@/components/ui/separator';
 
 export function TabBar({ activeId }: { activeId: string }) {
   const order = useProjectStore((s) => s.openOrder);
@@ -10,6 +12,8 @@ export function TabBar({ activeId }: { activeId: string }) {
 
   return (
     <div className="flex items-center gap-1 border-b border-border bg-card px-2 h-9">
+      <SidebarTrigger className="-ml-1" />
+      <Separator orientation="vertical" className="mr-1" />
       {order.map((id) => {
         const p = projects[id];
         if (!p) return null;

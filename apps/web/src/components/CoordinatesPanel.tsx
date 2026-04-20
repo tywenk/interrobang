@@ -1,19 +1,16 @@
-import type { RefObject } from 'react';
 import { useEffect, useState } from 'react';
 import type { EditorCanvasHandle, LiveEditEvent } from '@interrobang/editor';
 
 interface Props {
-  canvasRef: RefObject<EditorCanvasHandle | null>;
+  canvas: EditorCanvasHandle | null;
 }
 
-export function CoordinatesPanel({ canvasRef }: Props) {
+export function CoordinatesPanel({ canvas }: Props) {
   const [live, setLive] = useState<LiveEditEvent | null>(null);
   useEffect(() => {
-    const handle = canvasRef.current;
-    if (!handle) return;
-    const off = handle.on('liveEdit', setLive);
-    return off;
-  }, [canvasRef]);
+    if (!canvas) return;
+    return canvas.on('liveEdit', setLive);
+  }, [canvas]);
 
   return (
     <div className="w-56 border-l border-border p-3 text-xs">
