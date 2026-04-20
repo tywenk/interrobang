@@ -146,6 +146,13 @@ export class BrowserStorageAdapter implements StorageAdapter {
         ],
       );
 
+      // Layers have a FK to glyphs with ON DELETE CASCADE, but SQLite's
+      // foreign_keys pragma is off by default, so we delete them explicitly
+      // to avoid primary-key collisions when re-inserting the same layer ids.
+      await this.db.mutate(
+        'DELETE FROM layers WHERE glyph_id IN (SELECT id FROM glyphs WHERE project_id = ?)',
+        [projectId],
+      );
       await this.db.mutate('DELETE FROM glyphs WHERE project_id = ?', [projectId]);
 
       for (const id of font.glyphOrder) {

@@ -35,6 +35,9 @@ async function open(dbName: string): Promise<void> {
   }
   api.vfs_register(vfs, true);
   db = await api.open_v2(dbName);
+  // Must be set per-connection and outside a transaction; the schema's
+  // ON DELETE CASCADE is only honoured when this is on.
+  await api.exec(db, 'PRAGMA foreign_keys = ON');
 }
 
 async function exec(sql: string): Promise<void> {
