@@ -1,5 +1,9 @@
+import type { MutationTarget } from './mutation-target.js';
+
 export interface Command<T> {
   readonly type: string;
+  /** Rows/entities this command mutates. Empty or omitted = full-state fallback. */
+  affects?: readonly MutationTarget[];
   apply(state: T): T;
   revert(state: T): T;
   canMergeWith?(other: Command<T>): boolean;
