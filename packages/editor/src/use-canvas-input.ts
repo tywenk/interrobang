@@ -7,6 +7,12 @@ import type { LiveEditEvent } from './editor-canvas.js';
 
 const HIT_TOLERANCE_PX = 8;
 
+function sameSet<T>(a: ReadonlySet<T>, b: ReadonlySet<T>): boolean {
+  if (a.size !== b.size) return false;
+  for (const v of a) if (!b.has(v)) return false;
+  return true;
+}
+
 export type DragState =
   | { kind: 'idle' }
   | {
@@ -159,7 +165,8 @@ export function useCanvasInput({
       if (hit && hit.kind === 'point') {
         const sel = selectionRef.current;
         const ids = sel.has(hit.pointId) ? Array.from(sel) : [hit.pointId];
-        onSelectionChangeRef.current?.(new Set(ids));
+        const nextSelection = new Set(ids);
+        if (!sameSet(sel, nextSelection)) onSelectionChangeRef.current?.(nextSelection);
         const startFont = vp.screenToFont(sx, sy);
         const next: DragState = {
           kind: 'dragging',
@@ -178,7 +185,7 @@ export function useCanvasInput({
         });
         scheduleDrawRef.current();
       } else {
-        onSelectionChangeRef.current?.(new Set());
+        if (selectionRef.current.size > 0) onSelectionChangeRef.current?.(new Set());
         scheduleDrawRef.current();
       }
     },

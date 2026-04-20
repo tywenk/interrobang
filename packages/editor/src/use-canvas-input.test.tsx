@@ -185,6 +185,53 @@ describe('useCanvasInput', () => {
     expect(result.current.input.dragRef.current.kind).toBe('idle');
   });
 
+  test('repeat mouse-down on the same selected point does not re-emit onSelectionChange', () => {
+    const glyph = makeGlyph();
+    const viewport = new Viewport({ canvasWidth: 800, canvasHeight: 600 });
+    const onSelectionChange = vi.fn();
+
+    const { result, rerender } = renderHook(
+      (args: { selection: ReadonlySet<string> }) =>
+        useHarness({
+          glyph,
+          selection: args.selection,
+          tool: 'select',
+          onSelectionChange,
+          viewport,
+        }),
+      { initialProps: { selection: new Set<string>() } },
+    );
+
+    act(() => result.current.input.onMouseDown(mouseEvent(400, 300)));
+    expect(onSelectionChange).toHaveBeenCalledTimes(1);
+
+    rerender({ selection: new Set(['p1']) });
+    act(() => result.current.input.onMouseUp(mouseEvent(400, 300)));
+    onSelectionChange.mockClear();
+
+    act(() => result.current.input.onMouseDown(mouseEvent(400, 300)));
+    expect(onSelectionChange).not.toHaveBeenCalled();
+  });
+
+  test('mouse-down outside any point with no prior selection does not emit onSelectionChange', () => {
+    const glyph = makeGlyph();
+    const viewport = new Viewport({ canvasWidth: 800, canvasHeight: 600 });
+    const onSelectionChange = vi.fn();
+
+    const { result } = renderHook(() =>
+      useHarness({
+        glyph,
+        selection: new Set(),
+        tool: 'select',
+        onSelectionChange,
+        viewport,
+      }),
+    );
+
+    act(() => result.current.input.onMouseDown(mouseEvent(700, 500)));
+    expect(onSelectionChange).not.toHaveBeenCalled();
+  });
+
   test('pen tool routes mouse-down to onPenClick with font coords', () => {
     const glyph = makeGlyph();
     const viewport = new Viewport({ canvasWidth: 800, canvasHeight: 600 });
