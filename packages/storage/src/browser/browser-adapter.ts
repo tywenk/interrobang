@@ -1,7 +1,4 @@
 import { newId, type Font, type Glyph, type Layer, type MutationTarget } from '@interrobang/core';
-import { tables } from '@interrobang/schema';
-import { eq, desc } from 'drizzle-orm';
-import { drizzle, type SqliteRemoteDatabase } from 'drizzle-orm/sqlite-proxy';
 import type { SqliteClient } from '../worker/client.js';
 import type { ProjectSummary, StorageAdapter } from '../adapter.js';
 import { applyMutation } from './apply-mutation.js';
@@ -13,56 +10,86 @@ import {
   serializeLayer,
 } from './serialize.js';
 
-const schema = tables;
-type DrizzleDb = SqliteRemoteDatabase<typeof schema>;
-
 /**
- * Build a Drizzle async proxy database backed by our `SqliteClient`. Used for
- * read paths only; writes stay on hand SQL until Drizzle's browser support
- * stabilizes. The proxy's result mapper indexes rows by column position, so
- * we feed it `Object.values(row)` from the column-ordered objects our
- * worker returns.
+ * SQL row shapes, matching the column names SQLite returns (snake_case).
+ * We keep Drizzle's table definitions in `@interrobang/schema` as the source
+ * of truth for DDL, but consume rows through hand SQL: Drizzle's sqlite-proxy
+ * works against node:sqlite in tests but throws against our wa-sqlite worker
+ * at runtime, and typed reads aren't worth a second query path.
  */
-function makeDrizzle(client: SqliteClient): DrizzleDb {
-  return drizzle(
-    async (sql, params, method) => {
-      if (method === 'run') {
-        await client.mutate(sql, params as unknown[] as never);
-        return { rows: [] };
-      }
-      const rows = await client.query(sql, params as unknown[] as never);
-      if (method === 'get') {
-        const first = rows[0];
-        return { rows: first ? Object.values(first) : [] };
-      }
-      // all, values
-      return { rows: rows.map((r) => Object.values(r)) };
-    },
-    { schema },
-  );
+interface ProjectRow {
+  id: string;
+  name: string;
+  updated_at: number;
+  revision: number;
+}
+interface FontMetaRow {
+  project_id: string;
+  family_name: string;
+  style_name: string;
+  units_per_em: number;
+  ascender: number;
+  descender: number;
+  cap_height: number;
+  x_height: number;
+  extra_metrics_json: string | null;
+}
+interface MasterRow {
+  id: string;
+  project_id: string;
+  name: string;
+  weight: number;
+  width: number;
+}
+interface GlyphRow {
+  id: string;
+  project_id: string;
+  name: string;
+  advance_width: number;
+  unicode_codepoint: number | null;
+  revision: number;
+}
+interface LayerRow {
+  id: string;
+  glyph_id: string;
+  master_id: string;
+  contours_json: string;
+  components_json: string;
+  anchors_json: string;
+}
+interface KerningRow {
+  project_id: string;
+  left_glyph: string;
+  right_glyph: string;
+  value: number;
+  revision: number;
+}
+interface ProjectRevisionRow {
+  id: string;
+  revision: number;
+}
+
+async function queryRows<T>(
+  client: SqliteClient,
+  sql: string,
+  params: unknown[] = [],
+): Promise<T[]> {
+  const rows = await client.query(sql, params as never);
+  return rows as unknown as T[];
 }
 
 export class BrowserStorageAdapter implements StorageAdapter {
-  private readonly orm: DrizzleDb;
-
-  constructor(private db: SqliteClient) {
-    this.orm = makeDrizzle(db);
-  }
+  constructor(private db: SqliteClient) {}
 
   async listProjects(): Promise<ProjectSummary[]> {
-    const rows = await this.orm
-      .select({
-        id: tables.projects.id,
-        name: tables.projects.name,
-        updatedAt: tables.projects.updatedAt,
-        revision: tables.projects.revision,
-      })
-      .from(tables.projects)
-      .orderBy(desc(tables.projects.updatedAt));
+    const rows = await queryRows<ProjectRow>(
+      this.db,
+      'SELECT id, name, updated_at, revision FROM projects ORDER BY updated_at DESC',
+    );
     return rows.map((r) => ({
       id: r.id,
       name: r.name,
-      updatedAt: r.updatedAt,
+      updatedAt: r.updated_at,
       revision: r.revision,
     }));
   }
@@ -88,59 +115,59 @@ export class BrowserStorageAdapter implements StorageAdapter {
   }
 
   async loadFont(projectId: string): Promise<Font> {
-    const [meta] = await this.orm
-      .select()
-      .from(tables.fontMeta)
-      .where(eq(tables.fontMeta.projectId, projectId));
+    const [meta] = await queryRows<FontMetaRow>(
+      this.db,
+      'SELECT * FROM font_meta WHERE project_id = ?',
+      [projectId],
+    );
     if (!meta) throw new Error(`No project: ${projectId}`);
 
-    const [projRow] = await this.orm
-      .select({ id: tables.projects.id, revision: tables.projects.revision })
-      .from(tables.projects)
-      .where(eq(tables.projects.id, projectId));
+    const [projRow] = await queryRows<ProjectRevisionRow>(
+      this.db,
+      'SELECT id, revision FROM projects WHERE id = ?',
+      [projectId],
+    );
     if (!projRow) throw new Error(`No project row: ${projectId}`);
 
-    const masterRows = await this.orm
-      .select()
-      .from(tables.masters)
-      .where(eq(tables.masters.projectId, projectId));
+    const masterRows = await queryRows<MasterRow>(
+      this.db,
+      'SELECT * FROM masters WHERE project_id = ?',
+      [projectId],
+    );
 
-    const glyphRows = await this.orm
-      .select()
-      .from(tables.glyphs)
-      .where(eq(tables.glyphs.projectId, projectId));
+    const glyphRows = await queryRows<GlyphRow>(
+      this.db,
+      'SELECT * FROM glyphs WHERE project_id = ?',
+      [projectId],
+    );
 
-    const layerRows = await this.orm
-      .select({
-        id: tables.layers.id,
-        glyphId: tables.layers.glyphId,
-        masterId: tables.layers.masterId,
-        contoursJson: tables.layers.contoursJson,
-        componentsJson: tables.layers.componentsJson,
-        anchorsJson: tables.layers.anchorsJson,
-      })
-      .from(tables.layers)
-      .innerJoin(tables.glyphs, eq(tables.glyphs.id, tables.layers.glyphId))
-      .where(eq(tables.glyphs.projectId, projectId));
+    const layerRows = await queryRows<LayerRow>(
+      this.db,
+      `SELECT layers.* FROM layers
+       INNER JOIN glyphs ON glyphs.id = layers.glyph_id
+       WHERE glyphs.project_id = ?`,
+      [projectId],
+    );
 
-    const kerningRows = await this.orm
-      .select()
-      .from(tables.kerningPairs)
-      .where(eq(tables.kerningPairs.projectId, projectId));
+    const kerningRows = await queryRows<KerningRow>(
+      this.db,
+      'SELECT * FROM kerning_pairs WHERE project_id = ?',
+      [projectId],
+    );
 
     const layersByGlyph = new Map<string, Layer[]>();
     for (const r of layerRows) {
-      const arr = layersByGlyph.get(r.glyphId) ?? [];
+      const arr = layersByGlyph.get(r.glyph_id) ?? [];
       arr.push(
         deserializeLayer({
           id: r.id,
-          master_id: r.masterId,
-          contours_json: r.contoursJson,
-          components_json: r.componentsJson,
-          anchors_json: r.anchorsJson,
+          master_id: r.master_id,
+          contours_json: r.contours_json,
+          components_json: r.components_json,
+          anchors_json: r.anchors_json,
         }),
       );
-      layersByGlyph.set(r.glyphId, arr);
+      layersByGlyph.set(r.glyph_id, arr);
     }
 
     const glyphs: { [id: string]: Glyph } = {};
@@ -149,25 +176,25 @@ export class BrowserStorageAdapter implements StorageAdapter {
       glyphs[g.id] = {
         id: g.id,
         name: g.name,
-        advanceWidth: g.advanceWidth,
-        unicodeCodepoint: g.unicodeCodepoint ?? null,
+        advanceWidth: g.advance_width,
+        unicodeCodepoint: g.unicode_codepoint ?? null,
         layers: layersByGlyph.get(g.id) ?? [],
         revision: g.revision,
       };
       order.push(g.id);
     }
 
-    const extra = deserializeExtraMetrics(meta.extraMetricsJson);
+    const extra = deserializeExtraMetrics(meta.extra_metrics_json);
     return {
       id: projRow.id,
       meta: {
-        familyName: meta.familyName,
-        styleName: meta.styleName,
-        unitsPerEm: meta.unitsPerEm,
+        familyName: meta.family_name,
+        styleName: meta.style_name,
+        unitsPerEm: meta.units_per_em,
         ascender: meta.ascender,
         descender: meta.descender,
-        capHeight: meta.capHeight,
-        xHeight: meta.xHeight,
+        capHeight: meta.cap_height,
+        xHeight: meta.x_height,
         ...(extra ? { extraMetrics: extra } : {}),
       },
       masters: masterRows.map((m) => ({
@@ -179,8 +206,8 @@ export class BrowserStorageAdapter implements StorageAdapter {
       glyphs,
       glyphOrder: order,
       kerning: kerningRows.map((k) => ({
-        leftGlyph: k.leftGlyph,
-        rightGlyph: k.rightGlyph,
+        leftGlyph: k.left_glyph,
+        rightGlyph: k.right_glyph,
         value: k.value,
       })),
       revision: projRow.revision,
