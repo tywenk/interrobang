@@ -1,7 +1,20 @@
-import { createRouter } from '@tanstack/react-router';
-import { indexRoute } from './routes/index';
-import { projectRoute } from './routes/project';
-import { rootRoute } from './routes/root';
+import { createRootRoute, createRoute, createRouter, Outlet } from '@tanstack/react-router';
+import { ProjectPickerPage } from '@/pages/ProjectPickerPage';
+import { EditorPage } from '@/pages/EditorPage';
+
+export const rootRoute = createRootRoute({ component: () => <Outlet /> });
+
+export const indexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/',
+  component: ProjectPickerPage,
+});
+
+export const projectRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/project/$projectId',
+  component: EditorPage,
+});
 
 const routeTree = rootRoute.addChildren([indexRoute, projectRoute]);
 

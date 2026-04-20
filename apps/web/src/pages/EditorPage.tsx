@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { projectRoute } from '../routes/project';
+import { projectRoute } from '../router';
 import { getStorage } from '../services/storage';
 import { useProjectStore } from '../stores/project-store';
 import { useEditorStore } from '../stores/editor-store';
