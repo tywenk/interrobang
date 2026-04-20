@@ -1,11 +1,13 @@
-import { test, expect } from 'vitest';
+import { test, expect, describe, it } from 'vitest';
 import type { Font, Layer } from '../index.js';
 import { createGlyph, emptyFont } from '../ops/glyph-ops.js';
 import {
   movePointsCommand,
   insertPointCommand,
+  removePointCommand,
   convertPointTypeCommand,
   addGlyphCommand,
+  unionAffects,
 } from './font-commands.js';
 
 function fontWithGlyph(): Font {
@@ -137,4 +139,96 @@ test('two consecutive movePoints commands on the same point set merge', () => {
   const f0 = fontWithGlyph();
   const f1 = merged.apply(f0);
   expect(f1.glyphs.g1!.layers[0]!.contours[0]!.points[1]!.x).toBe(103);
+});
+
+describe('affects', () => {
+  it('movePointsCommand affects the target layer', () => {
+    const cmd = movePointsCommand({
+      glyphId: 'g1',
+      layerId: 'l1',
+      contourId: 'c1',
+      pointIds: ['p1'],
+      dx: 0,
+      dy: 0,
+    });
+    expect(cmd.affects).toEqual([{ kind: 'layer', glyphId: 'g1', layerId: 'l1' }]);
+  });
+
+  it('insertPointCommand affects the target layer', () => {
+    const cmd = insertPointCommand({
+      glyphId: 'g1',
+      layerId: 'l1',
+      contourId: 'c1',
+      index: 0,
+      point: { id: 'pX', x: 0, y: 0, type: 'line', smooth: false },
+    });
+    expect(cmd.affects).toEqual([{ kind: 'layer', glyphId: 'g1', layerId: 'l1' }]);
+  });
+
+  it('removePointCommand affects the target layer', () => {
+    const cmd = removePointCommand({
+      glyphId: 'g1',
+      layerId: 'l1',
+      contourId: 'c1',
+      pointId: 'p1',
+    });
+    expect(cmd.affects).toEqual([{ kind: 'layer', glyphId: 'g1', layerId: 'l1' }]);
+  });
+
+  it('convertPointTypeCommand affects the target layer', () => {
+    const cmd = convertPointTypeCommand({
+      glyphId: 'g1',
+      layerId: 'l1',
+      contourId: 'c1',
+      pointId: 'p1',
+      newType: 'curve',
+    });
+    expect(cmd.affects).toEqual([{ kind: 'layer', glyphId: 'g1', layerId: 'l1' }]);
+  });
+
+  it('addGlyphCommand affects the new glyph and each of its layers', () => {
+    const f0 = emptyFont('Test');
+    const masterId = f0.masters[0]!.id;
+    const glyph = createGlyph({ name: 'A', codepoint: 65, masterId });
+    const cmd = addGlyphCommand({ glyph });
+    expect(cmd.affects).toEqual([
+      { kind: 'glyph', glyphId: glyph.id },
+      { kind: 'layer', glyphId: glyph.id, layerId: glyph.layers[0]!.id },
+    ]);
+  });
+
+  it('movePoints mergeWith unions affects', () => {
+    const a = movePointsCommand({
+      glyphId: 'g1',
+      layerId: 'l1',
+      contourId: 'c1',
+      pointIds: ['p1'],
+      dx: 1,
+      dy: 0,
+    });
+    const b = movePointsCommand({
+      glyphId: 'g1',
+      layerId: 'l1',
+      contourId: 'c1',
+      pointIds: ['p1'],
+      dx: 2,
+      dy: 0,
+    });
+    const merged = a.mergeWith!(b);
+    expect(merged.affects).toEqual([{ kind: 'layer', glyphId: 'g1', layerId: 'l1' }]);
+  });
+});
+
+describe('unionAffects', () => {
+  it('dedupes by identity key', () => {
+    const a = [{ kind: 'layer', glyphId: 'g', layerId: 'l' }] as const;
+    const b = [
+      { kind: 'layer', glyphId: 'g', layerId: 'l' },
+      { kind: 'glyph', glyphId: 'g' },
+    ] as const;
+    expect(unionAffects(a, b)).toEqual([
+      { kind: 'layer', glyphId: 'g', layerId: 'l' },
+      { kind: 'glyph', glyphId: 'g' },
+    ]);
+  });
 });
