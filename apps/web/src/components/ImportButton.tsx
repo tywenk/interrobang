@@ -1,7 +1,12 @@
 import { useNavigate } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
 import { getStorage } from '../services/storage';
-import { getFontIo } from '../services/font-io';
+import { createFontIoWorker } from '@interrobang/font-io';
+
+let client: ReturnType<typeof createFontIoWorker> | null = null;
+function fontIo() {
+  return (client ??= createFontIoWorker());
+}
 
 export function ImportButton() {
   const nav = useNavigate();
@@ -14,12 +19,12 @@ export function ImportButton() {
       const file = input.files?.[0];
       if (!file) return;
       const bytes = await file.arrayBuffer();
-      const fontIo = getFontIo();
+      const fontIoClient = fontIo();
       const lower = file.name.toLowerCase();
       const font =
         lower.endsWith('.ufo') || lower.endsWith('.zip')
-          ? await fontIo.parseUFO(await unzipToMap(new Uint8Array(bytes)))
-          : await fontIo.parseOTF(bytes);
+          ? await fontIoClient.parseUFO(await unzipToMap(new Uint8Array(bytes)))
+          : await fontIoClient.parseOTF(bytes);
       const storage = await getStorage();
       const id = await storage.createProject(font.meta.familyName);
       await storage.saveFont(id, { ...font, id });
