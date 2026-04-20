@@ -2,26 +2,27 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { getStorage } from '../services/storage';
+import { useAppServices } from '../app-context';
 import { ImportButton } from '../components/import-button';
 import type { ProjectSummary } from '@interrobang/storage';
 
 export function ProjectPickerPage() {
+  const { storage } = useAppServices();
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
   const [name, setName] = useState('Untitled');
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    getStorage()
+    storage
       .then((s) => s.listProjects())
       .then(setProjects)
       .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
-  }, []);
+  }, [storage]);
 
   async function create() {
     try {
-      const s = await getStorage();
+      const s = await storage;
       const id = await s.createProject(name);
       await navigate({ to: '/project/$projectId', params: { projectId: id } });
     } catch (err: unknown) {
