@@ -21,10 +21,13 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './apps/web/src'),
+      // Mirror apps/web: run tests against workspace sources, not dist.
+      '@interrobang/core': path.resolve(__dirname, './packages/core/src/index.ts'),
+      '@interrobang/schema': path.resolve(__dirname, './packages/schema/src/index.ts'),
+      '@interrobang/editor': path.resolve(__dirname, './packages/editor/src/index.ts'),
+      '@interrobang/font-io': path.resolve(__dirname, './packages/font-io/src/index.ts'),
+      '@interrobang/storage': path.resolve(__dirname, './packages/storage/src/index.ts'),
     },
-    // Mirror apps/web: prefer workspace package sources so tests run against
-    // `src/` instead of any cached `dist/` output.
-    conditions: ['source', 'module', 'browser', 'import', 'default'],
   },
   test: {
     environment: 'happy-dom',

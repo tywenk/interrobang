@@ -22,11 +22,15 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // Workspace packages resolve to source so Vite processes TS + follows
+      // `new URL('./worker.ts', import.meta.url)` to the real file. `dist/`
+      // is still emitted by tsup for external consumers.
+      '@interrobang/core': path.resolve(__dirname, '../../packages/core/src/index.ts'),
+      '@interrobang/schema': path.resolve(__dirname, '../../packages/schema/src/index.ts'),
+      '@interrobang/editor': path.resolve(__dirname, '../../packages/editor/src/index.ts'),
+      '@interrobang/font-io': path.resolve(__dirname, '../../packages/font-io/src/index.ts'),
+      '@interrobang/storage': path.resolve(__dirname, '../../packages/storage/src/index.ts'),
     },
-    // Prefer workspace packages' TS source over their `dist/` emit so Vite
-    // resolves `new URL('./worker.ts', import.meta.url)` against the real
-    // file. `dist/` is still the advertised entry for external consumers.
-    conditions: ['source', 'module', 'browser', 'import', 'default'],
   },
   worker: { format: 'es' },
   optimizeDeps: { exclude: ['wa-sqlite'] },
