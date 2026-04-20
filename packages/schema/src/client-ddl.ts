@@ -1,5 +1,6 @@
 import migration0000 from '../migrations/0000_initial.sql' with { type: 'text' };
 import migration0001 from '../migrations/0001_schema_versions.sql' with { type: 'text' };
+import migration0002 from '../migrations/0002_components.sql' with { type: 'text' };
 
 const SERVER_ONLY_TABLES = new Set(['users']);
 
@@ -34,6 +35,7 @@ export interface Migration {
 export const migrations: readonly Migration[] = [
   { version: 0, sql: migration0000 },
   { version: 1, sql: migration0001 },
+  { version: 2, sql: migration0002 },
 ];
 
 /**

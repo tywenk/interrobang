@@ -116,6 +116,37 @@ export const schemaVersions = sqliteTable('schema_versions', {
   appliedAt: integer('applied_at').notNull(),
 });
 
+// Scaffold for the future components feature. Tables exist as of migration
+// 0002 but no code reads or writes them yet. See
+// `packages/storage/src/browser/component-refs.ts` and the Phase 5 plan.
+export const components = sqliteTable('components', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id')
+    .notNull()
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  layerJson: text('layer_json').notNull(),
+});
+
+export const componentRefs = sqliteTable(
+  'component_refs',
+  {
+    glyphId: text('glyph_id')
+      .notNull()
+      .references(() => glyphs.id, { onDelete: 'cascade' }),
+    layerId: text('layer_id')
+      .notNull()
+      .references(() => layers.id, { onDelete: 'cascade' }),
+    componentId: text('component_id')
+      .notNull()
+      .references(() => components.id, { onDelete: 'restrict' }),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.glyphId, t.layerId, t.componentId] }),
+    byComponent: index('component_refs_by_component').on(t.componentId),
+  }),
+);
+
 // Client-only. Server tracks revisions on rows themselves.
 export const syncLog = sqliteTable('sync_log', {
   id: integer('id').primaryKey({ autoIncrement: true }),

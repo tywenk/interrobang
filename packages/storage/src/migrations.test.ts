@@ -62,4 +62,15 @@ describe('runMigrations', () => {
     const after = await client.query('SELECT COUNT(*) AS c FROM schema_versions');
     expect((after[0] as { c: number }).c).toBe((before[0] as { c: number }).c);
   });
+
+  it('applies migration 0002 (components + component_refs) idempotently', async () => {
+    const { client } = makeClient();
+    await runMigrations(client);
+    // Both runs should succeed and leave the components tables in place.
+    await runMigrations(client);
+    const tables = await client.query(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('components', 'component_refs') ORDER BY name",
+    );
+    expect(tables.map((r) => r['name'])).toEqual(['component_refs', 'components']);
+  });
 });

@@ -1,6 +1,8 @@
 import { getClientDDL, getClientMigrations } from '@interrobang/schema';
 import type { SqliteClient } from './worker/client.js';
 
+const APPLIED_AT_SQL = "CAST(strftime('%s','now') AS INTEGER) * 1000";
+
 /**
  * Apply any schema migrations whose version is greater than the highest
  * `schema_versions.version` already recorded.
@@ -41,9 +43,17 @@ async function runFreshBootstrap(db: SqliteClient): Promise<void> {
   await db.exec('BEGIN');
   try {
     await db.exec(ddl);
-    // Migration 0001 already seeds schema_versions for (0, 0) and (1, 0),
-    // so no follow-up INSERT is needed here. Clear the legacy PRAGMA so it
-    // does not confuse future readers.
+    // Migration 0001 seeds schema_versions for (0, 0) and (1, 0). For every
+    // other known migration that just ran as part of the concatenated DDL,
+    // insert a row so `MAX(version)` reflects reality. `OR IGNORE` keeps
+    // this idempotent with anything 0001 already seeded.
+    for (const m of getClientMigrations()) {
+      await db.mutate(
+        `INSERT OR IGNORE INTO schema_versions(version, applied_at) VALUES (?, ${APPLIED_AT_SQL})`,
+        [m.version],
+      );
+    }
+    // Clear the legacy PRAGMA so it does not confuse future readers.
     await db.exec('PRAGMA user_version = 0');
     await db.exec('COMMIT');
   } catch (err) {
@@ -72,7 +82,7 @@ async function applyMigrationsAfter(
         await db.exec(migration.sql);
       }
       await db.mutate(
-        "INSERT OR IGNORE INTO schema_versions(version, applied_at) VALUES (?, CAST(strftime('%s','now') AS INTEGER) * 1000)",
+        `INSERT OR IGNORE INTO schema_versions(version, applied_at) VALUES (?, ${APPLIED_AT_SQL})`,
         [migration.version],
       );
       await db.exec('COMMIT');
