@@ -82,15 +82,11 @@ export function movePointsCommand(args: MovePointsArgs): Command<Font> {
       other.type === 'movePoints' &&
       sameSet(ids, new Set((other as Command<Font> & { _ids: ReadonlySet<string> })._ids ?? [])),
     mergeWith: (other) => {
-      const o = other as Command<Font> & {
-        _dx: number;
-        _dy: number;
-        affects?: readonly MutationTarget[];
-      };
+      const o = other as Command<Font> & { _dx: number; _dy: number };
       const merged = movePointsCommand({ ...args, dx: args.dx + o._dx, dy: args.dy + o._dy });
       return {
         ...merged,
-        affects: unionAffects(affects, o.affects ?? []),
+        affects: unionAffects(affects, o.affects),
       } as Command<Font>;
     },
     _ids: ids,

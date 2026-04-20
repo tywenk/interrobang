@@ -108,28 +108,35 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   undo(id) {
     const proj = get().openProjects[id];
     if (!proj) return;
-    const next = proj.undoStack.undo(proj.font);
-    if (!next) return;
-    // TODO(incremental-undo): compute reverse affects properly once the data
-    // model supports it. For now, fall back to a full saveFont on revert —
-    // partial writes of a reverted state would be worse than a one-off full
-    // rewrite.
-    set((s) => ({
-      openProjects: { ...s.openProjects, [id]: { ...proj, font: next, dirty: true } },
-      pendingMutations: { ...s.pendingMutations, [id]: [] },
-    }));
+    const result = proj.undoStack.undo(proj.font);
+    if (!result) return;
+    set((s) => {
+      const prevPending = s.pendingMutations[id] ?? [];
+      return {
+        openProjects: { ...s.openProjects, [id]: { ...proj, font: result.state, dirty: true } },
+        pendingMutations: {
+          ...s.pendingMutations,
+          [id]: unionAffects(prevPending, result.command.affects),
+        },
+      };
+    });
   },
 
   redo(id) {
     const proj = get().openProjects[id];
     if (!proj) return;
-    const next = proj.undoStack.redo(proj.font);
-    if (!next) return;
-    // TODO(incremental-undo): mirrors undo above.
-    set((s) => ({
-      openProjects: { ...s.openProjects, [id]: { ...proj, font: next, dirty: true } },
-      pendingMutations: { ...s.pendingMutations, [id]: [] },
-    }));
+    const result = proj.undoStack.redo(proj.font);
+    if (!result) return;
+    set((s) => {
+      const prevPending = s.pendingMutations[id] ?? [];
+      return {
+        openProjects: { ...s.openProjects, [id]: { ...proj, font: result.state, dirty: true } },
+        pendingMutations: {
+          ...s.pendingMutations,
+          [id]: unionAffects(prevPending, result.command.affects),
+        },
+      };
+    });
   },
 
   markClean(id) {
