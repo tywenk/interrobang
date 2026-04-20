@@ -1,5 +1,5 @@
 import type { Font, Glyph, Layer } from '../index.js';
-import { newId } from '../id.js';
+import { nanoid as newId } from 'nanoid';
 
 export function updateGlyph(font: Font, glyphId: string, updater: (g: Glyph) => Glyph): Font {
   const existing = font.glyphs[glyphId];
