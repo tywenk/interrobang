@@ -23,6 +23,10 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+    // Prefer workspace packages' TS source over their `dist/` emit so Vite
+    // resolves `new URL('./worker.ts', import.meta.url)` against the real
+    // file. `dist/` is still the advertised entry for external consumers.
+    conditions: ['source', 'module', 'browser', 'import', 'default'],
   },
   worker: { format: 'es' },
   optimizeDeps: { exclude: ['wa-sqlite'] },

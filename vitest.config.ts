@@ -22,6 +22,9 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './apps/web/src'),
     },
+    // Mirror apps/web: prefer workspace package sources so tests run against
+    // `src/` instead of any cached `dist/` output.
+    conditions: ['source', 'module', 'browser', 'import', 'default'],
   },
   test: {
     environment: 'happy-dom',
