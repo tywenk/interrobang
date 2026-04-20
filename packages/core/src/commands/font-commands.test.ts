@@ -1,7 +1,12 @@
 import { test, expect } from 'vitest';
 import type { Font, Layer } from '../index.js';
-import { emptyFont } from '../ops/glyph-ops.js';
-import { movePointsCommand, insertPointCommand, convertPointTypeCommand } from './font-commands.js';
+import { createGlyph, emptyFont } from '../ops/glyph-ops.js';
+import {
+  movePointsCommand,
+  insertPointCommand,
+  convertPointTypeCommand,
+  addGlyphCommand,
+} from './font-commands.js';
 
 function fontWithGlyph(): Font {
   const f = emptyFont('Test');
@@ -85,6 +90,29 @@ test('convertPointTypeCommand round-trips', () => {
   expect(f1.glyphs.g1!.layers[0]!.contours[0]!.points[1]!.type).toBe('curve');
   const f2 = cmd.revert(f1);
   expect(f2.glyphs.g1!.layers[0]!.contours[0]!.points[1]!.type).toBe('line');
+});
+
+test('addGlyphCommand round-trips: apply then revert returns original font', () => {
+  const f0 = emptyFont('Test');
+  const masterId = f0.masters[0]!.id;
+  const glyph = createGlyph({ name: 'A', codepoint: 65, masterId, starter: 'triangle' });
+  const cmd = addGlyphCommand({ glyph });
+  const f1 = cmd.apply(f0);
+  expect(f1.glyphs[glyph.id]).toBe(glyph);
+  expect(f1.glyphOrder).toContain(glyph.id);
+  const f2 = cmd.revert(f1);
+  expect(f2.glyphs).toEqual(f0.glyphs);
+  expect(f2.glyphOrder).toEqual(f0.glyphOrder);
+});
+
+test('addGlyphCommand apply is idempotent when the glyph id already exists', () => {
+  const f0 = emptyFont('Test');
+  const masterId = f0.masters[0]!.id;
+  const glyph = createGlyph({ name: 'A', codepoint: 65, masterId });
+  const cmd = addGlyphCommand({ glyph });
+  const f1 = cmd.apply(f0);
+  const f2 = cmd.apply(f1);
+  expect(f2).toBe(f1);
 });
 
 test('two consecutive movePoints commands on the same point set merge', () => {

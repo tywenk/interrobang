@@ -1,4 +1,4 @@
-import type { Font, Point, PointType, Layer } from '../index.js';
+import type { Font, Glyph, Point, PointType, Layer } from '../index.js';
 import type { Command } from './command.js';
 import { insertPoint, removePoint, movePoints, convertPointType } from '../ops/contour-ops.js';
 import { updateGlyph, replaceLayer } from '../ops/glyph-ops.js';
@@ -99,6 +99,33 @@ export function removePointCommand(args: RemovePointArgs): Command<Font> {
 export interface ConvertPointTypeArgs extends ContourTarget {
   pointId: string;
   newType: PointType;
+}
+
+interface AddGlyphCommandInput {
+  glyph: Glyph;
+}
+
+export function addGlyphCommand(input: AddGlyphCommandInput): Command<Font> {
+  const { glyph } = input;
+  return {
+    type: 'addGlyph',
+    apply(font) {
+      if (font.glyphs[glyph.id]) return font;
+      return {
+        ...font,
+        glyphs: { ...font.glyphs, [glyph.id]: glyph },
+        glyphOrder: [...font.glyphOrder, glyph.id],
+      };
+    },
+    revert(font) {
+      const { [glyph.id]: _removed, ...rest } = font.glyphs;
+      return {
+        ...font,
+        glyphs: rest,
+        glyphOrder: font.glyphOrder.filter((id) => id !== glyph.id),
+      };
+    },
+  };
 }
 
 export function convertPointTypeCommand(args: ConvertPointTypeArgs): Command<Font> {

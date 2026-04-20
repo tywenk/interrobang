@@ -1,5 +1,12 @@
 import { create } from 'zustand';
-import { UndoRedoStack, type Command, type Font } from '@interrobang/core';
+import {
+  addGlyphCommand,
+  createGlyph,
+  UndoRedoStack,
+  type Command,
+  type Font,
+} from '@interrobang/core';
+import { useEditorStore } from './editor-store';
 
 export interface OpenProject {
   id: string;
@@ -21,6 +28,7 @@ interface ProjectState {
   undo: (id: string) => void;
   redo: (id: string) => void;
   markClean: (id: string) => void;
+  addGlyph: (projectId: string, char: string) => void;
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
@@ -91,5 +99,32 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set((s) => ({
       openProjects: { ...s.openProjects, [id]: { ...proj, dirty: false } },
     }));
+  },
+
+  addGlyph(projectId, char) {
+    const proj = get().openProjects[projectId];
+    if (!proj) return;
+    const masterId = proj.font.masters[0]?.id;
+    if (!masterId) return;
+
+    const rawChar = (char ?? 'A').trim();
+    const safeChar = rawChar.length > 0 ? [...rawChar][0]! : 'A';
+    const codepoint = safeChar.codePointAt(0) ?? null;
+
+    const existing = Object.values(proj.font.glyphs);
+    const byCodepoint = codepoint
+      ? existing.find((g) => g.unicodeCodepoint === codepoint)
+      : undefined;
+    if (byCodepoint) {
+      useEditorStore.getState().setActiveGlyph(projectId, byCodepoint.id);
+      return;
+    }
+
+    let name = safeChar;
+    for (let i = 1; existing.some((g) => g.name === name); i++) name = `${safeChar}.${i}`;
+
+    const glyph = createGlyph({ name, codepoint, masterId, starter: 'triangle' });
+    get().applyCommand(projectId, addGlyphCommand({ glyph }));
+    useEditorStore.getState().setActiveGlyph(projectId, glyph.id);
   },
 }));

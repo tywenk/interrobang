@@ -9,6 +9,7 @@ export {
   insertPointCommand,
   removePointCommand,
   convertPointTypeCommand,
+  addGlyphCommand,
 } from './commands/font-commands.js';
 export { emptyFont, updateGlyph, replaceLayer, createGlyph } from './ops/glyph-ops.js';
 export type { CreateGlyphInput } from './ops/glyph-ops.js';
