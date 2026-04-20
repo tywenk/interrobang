@@ -181,6 +181,10 @@ export function addGlyphCommand(input: AddGlyphCommandInput): Command<Font> {
   };
 }
 
+// TODO(components): editComponentCommand, referenceComponentCommand — each
+// produces a MutationTarget { kind: 'component', componentId } and fans out
+// to every glyph referencing that component (see component_refs table).
+
 export function convertPointTypeCommand(args: ConvertPointTypeArgs): Command<Font> {
   let prev: PointType | null = null;
   return {

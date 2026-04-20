@@ -151,6 +151,9 @@ async function applyOne(
     }
 
     case 'component':
+      // TODO(components): implement in tandem with editComponentCommand; rows
+      // live in `components` + `component_refs` (migration 0002). For now,
+      // writes via the 'component' target are unsupported.
       throw new Error(
         'NotImplemented: component mutations — tracked for future components feature',
       );

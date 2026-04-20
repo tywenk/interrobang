@@ -34,6 +34,8 @@ interface ProjectState {
    * MutationTargets accumulated since the last successful save, per project.
    * An empty/missing entry means "flush via full saveFont" (the legacy path).
    */
+  // TODO(components): pendingMutations will also accumulate component targets
+  // once component-edit commands land.
   pendingMutations: { [id: string]: readonly MutationTarget[] };
 
   addOpenProject: (p: Omit<OpenProject, 'undoStack' | 'dirty'>) => void;
@@ -143,6 +145,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     });
   },
 
+  // TODO(components): add a parallel addComponent(projectId, name, layer) that
+  // uses addComponentCommand + the components table (migration 0002).
   addGlyph(projectId, char) {
     const proj = get().openProjects[projectId];
     if (!proj) return;
