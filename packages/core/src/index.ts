@@ -10,4 +10,5 @@ export {
   removePointCommand,
   convertPointTypeCommand,
 } from './commands/font-commands.js';
-export { emptyFont, updateGlyph, replaceLayer } from './ops/glyph-ops.js';
+export { emptyFont, updateGlyph, replaceLayer, createGlyph } from './ops/glyph-ops.js';
+export type { CreateGlyphInput } from './ops/glyph-ops.js';
