@@ -1,5 +1,7 @@
+import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { defineConfig, type Plugin } from 'vitest/config';
+import react from '@vitejs/plugin-react';
 
 function sqlTextImportPlugin(): Plugin {
   return {
@@ -15,9 +17,14 @@ function sqlTextImportPlugin(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [sqlTextImportPlugin()],
+  plugins: [sqlTextImportPlugin(), react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './apps/web/src'),
+    },
+  },
   test: {
     environment: 'happy-dom',
-    include: ['packages/**/*.test.ts', 'test-setup/**/*.test.ts'],
+    include: ['packages/**/*.test.ts', 'test-setup/**/*.test.ts', 'apps/web/src/**/*.test.tsx'],
   },
 });

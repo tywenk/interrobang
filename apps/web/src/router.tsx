@@ -16,7 +16,7 @@ export const projectRoute = createRoute({
   component: EditorPage,
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, projectRoute]);
+export const routeTree = rootRoute.addChildren([indexRoute, projectRoute]);
 
 export const router = createRouter({ routeTree });
 
