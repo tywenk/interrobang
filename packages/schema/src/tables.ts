@@ -107,6 +107,15 @@ export const projectBlobs = sqliteTable(
   (t) => ({ pk: primaryKey({ columns: [t.projectId, t.key] }) }),
 );
 
+// Per-migration version tracking. Each applied migration inserts a row with
+// the migration number and the epoch-ms timestamp it was applied. Replaces
+// the single `PRAGMA user_version` integer previously driven by
+// `MIGRATION_VERSION`.
+export const schemaVersions = sqliteTable('schema_versions', {
+  version: integer('version').primaryKey(),
+  appliedAt: integer('applied_at').notNull(),
+});
+
 // Client-only. Server tracks revisions on rows themselves.
 export const syncLog = sqliteTable('sync_log', {
   id: integer('id').primaryKey({ autoIncrement: true }),

@@ -1,4 +1,5 @@
 import migration0000 from '../migrations/0000_initial.sql' with { type: 'text' };
+import migration0001 from '../migrations/0001_schema_versions.sql' with { type: 'text' };
 
 const SERVER_ONLY_TABLES = new Set(['users']);
 
@@ -20,14 +21,47 @@ function stripStatementsForTables(sql: string, tables: Set<string>): string {
     .join('\n\n');
 }
 
-const allMigrations = [migration0000];
+/**
+ * Ordered list of migrations with their integer version number. The version
+ * number is the numeric prefix on the `.sql` filename, so keep that in sync
+ * when adding new entries.
+ */
+export interface Migration {
+  version: number;
+  sql: string;
+}
 
+export const migrations: readonly Migration[] = [
+  { version: 0, sql: migration0000 },
+  { version: 1, sql: migration0001 },
+];
+
+/**
+ * Client DDL for initial (fresh-DB) apply. Concatenates all migrations and
+ * strips server-only tables. Used by `runMigrations` when the DB has no
+ * `schema_versions` table yet.
+ */
 export function getClientDDL(): string {
-  return allMigrations.map((m) => stripStatementsForTables(m, SERVER_ONLY_TABLES)).join('\n\n');
+  return migrations.map((m) => stripStatementsForTables(m.sql, SERVER_ONLY_TABLES)).join('\n\n');
+}
+
+/**
+ * Per-migration client DDL. Used by `runMigrations` to apply migrations whose
+ * version is greater than the currently recorded one, one transaction each.
+ */
+export function getClientMigrations(): readonly Migration[] {
+  return migrations.map((m) => ({
+    version: m.version,
+    sql: stripStatementsForTables(m.sql, SERVER_ONLY_TABLES),
+  }));
 }
 
 export function getServerDDL(): string {
-  return allMigrations.join('\n\n');
+  return migrations.map((m) => m.sql).join('\n\n');
 }
 
-export const MIGRATION_VERSION = allMigrations.length;
+/**
+ * @deprecated Use the `schema_versions` table. Retained for legacy load path;
+ * will be removed after one release cycle.
+ */
+export const MIGRATION_VERSION = 1;
