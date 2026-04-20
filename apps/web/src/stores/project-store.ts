@@ -10,14 +10,6 @@ import {
 } from '@interrobang/core';
 import { useEditorStore } from './editor-store';
 
-/**
- * Feature flag: drive auto-save from per-command `affects` targets via
- * `StorageAdapter.applyMutation`. When false, the save loop falls back to
- * the legacy whole-font `saveFont` rewrite. Flip to `false` to roll back
- * incremental save without touching the commit graph.
- */
-export const INCREMENTAL_SAVE = true;
-
 export interface OpenProject {
   id: string;
   name: string;
@@ -32,7 +24,7 @@ interface ProjectState {
   activeId: string | null;
   /**
    * MutationTargets accumulated since the last successful save, per project.
-   * An empty/missing entry means "flush via full saveFont" (the legacy path).
+   * Deduped via `unionAffects`. Read by `useAutoSave` → `SaveLoop.scheduleMutations`.
    */
   // TODO(components): pendingMutations will also accumulate component targets
   // once component-edit commands land.
@@ -95,12 +87,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const nextFont = proj.undoStack.apply(proj.font, cmd);
     set((s) => {
       const prevPending = s.pendingMutations[id] ?? [];
-      const cmdAffects = cmd.affects ?? [];
-      // Flag off → always empty, which routes flush through saveFont.
-      const mergedPending = INCREMENTAL_SAVE ? unionAffects(prevPending, cmdAffects) : [];
       return {
         openProjects: { ...s.openProjects, [id]: { ...proj, font: nextFont, dirty: true } },
-        pendingMutations: { ...s.pendingMutations, [id]: mergedPending },
+        pendingMutations: {
+          ...s.pendingMutations,
+          [id]: unionAffects(prevPending, cmd.affects),
+        },
       };
     });
   },

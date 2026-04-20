@@ -15,21 +15,20 @@ export class SaveLoop {
   constructor(private storagePromise: Promise<BrowserStorageAdapter>) {}
 
   /**
-   * Queue a save for `projectId`. If `targets` is empty, the flush falls back
-   * to `saveFont` (full-font rewrite) — used by the legacy path and by undo/
-   * redo where reverse-affects aren't tracked.
+   * Queue a save for `projectId` after the debounce window. `targets` accumulate
+   * and dedupe across consecutive calls; an empty targets array is a no-op
+   * (nothing to write, nothing to mark clean).
    */
   scheduleMutations(projectId: string, targets: readonly MutationTarget[]): void {
     const existing = this.pending.get(projectId);
     if (existing) clearTimeout(existing.timer);
     const nextTargets = existing ? unionAffects(existing.targets, targets) : targets;
+    if (nextTargets.length === 0) {
+      this.pending.delete(projectId);
+      return;
+    }
     const timer = setTimeout(() => void this.flushProject(projectId), DEBOUNCE_MS);
     this.pending.set(projectId, { timer, targets: nextTargets });
-  }
-
-  /** Legacy full-font save path; used when INCREMENTAL_SAVE flag is off. */
-  scheduleFull(projectId: string): void {
-    this.scheduleMutations(projectId, []);
   }
 
   cancel(projectId: string): void {
@@ -54,12 +53,8 @@ export class SaveLoop {
     if (!proj) return;
     try {
       const storage = await this.storagePromise;
-      if (pending.targets.length === 0) {
-        await storage.saveFont(projectId, proj.font);
-      } else {
-        for (const target of pending.targets) {
-          await storage.applyMutation(projectId, target, proj.font);
-        }
+      for (const target of pending.targets) {
+        await storage.applyMutation(projectId, target, proj.font);
       }
       useProjectStore.getState().markClean(projectId);
     } catch (err) {

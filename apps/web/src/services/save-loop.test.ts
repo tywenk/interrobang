@@ -91,15 +91,13 @@ describe('SaveLoop', () => {
     expect(calls[0]?.target).toEqual(target);
   });
 
-  it('empty targets fall back to saveFont', async () => {
+  it('empty targets are a no-op (nothing pending, nothing to write)', async () => {
     const { storage, calls } = makeFakeStorage();
     const loop = new SaveLoop(Promise.resolve(storage));
     seedProject('p1');
     loop.scheduleMutations('p1', []);
     await loop.flush();
-    expect(calls).toHaveLength(1);
-    expect(calls[0]?.kind).toBe('saveFont');
-    expect(calls[0]?.projectId).toBe('p1');
+    expect(calls).toHaveLength(0);
   });
 
   it('applies distinct targets in order', async () => {
@@ -124,15 +122,5 @@ describe('SaveLoop', () => {
     loop.cancel('p1');
     await loop.flush();
     expect(calls).toHaveLength(0);
-  });
-
-  it('scheduleFull routes through the saveFont path', async () => {
-    const { storage, calls } = makeFakeStorage();
-    const loop = new SaveLoop(Promise.resolve(storage));
-    seedProject('p1');
-    loop.scheduleFull('p1');
-    await loop.flush();
-    expect(calls).toHaveLength(1);
-    expect(calls[0]?.kind).toBe('saveFont');
   });
 });
