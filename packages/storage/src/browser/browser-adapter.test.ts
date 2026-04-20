@@ -5,6 +5,7 @@ import type { Font } from '@interrobang/core';
 import { getClientDDL } from '@interrobang/schema';
 import { BrowserStorageAdapter } from './browser-adapter.js';
 import type { SqliteClient } from '../worker/client.js';
+import type { MutationTarget } from '@interrobang/core';
 
 // node:sqlite is an experimental builtin — vite's resolver doesn't know about
 // it yet, so we load it through createRequire to skip the vite pipeline.
@@ -122,6 +123,197 @@ describe('BrowserStorageAdapter', () => {
     expect(new Set(loaded.glyphOrder)).toEqual(new Set([g1, g2]));
     expect(loaded.glyphs[g1]?.layers).toHaveLength(1);
     expect(loaded.glyphs[g2]?.layers).toHaveLength(1);
+  });
+
+  it('applyMutation(meta): updates font_meta row only', async () => {
+    const { adapter } = makeAdapter();
+    const projectId = await adapter.createProject('Test');
+    const font = await adapter.loadFont(projectId);
+    const edited: Font = {
+      ...font,
+      meta: {
+        ...font.meta,
+        familyName: 'Edited',
+        styleName: 'Bold',
+        unitsPerEm: 2048,
+        ascender: 1500,
+        descender: -500,
+        capHeight: 1200,
+        xHeight: 900,
+      },
+    };
+    const target: MutationTarget = { kind: 'meta', projectId };
+    await adapter.applyMutation(projectId, target, edited);
+    const loaded = await adapter.loadFont(projectId);
+    expect(loaded.meta.familyName).toBe('Edited');
+    expect(loaded.meta.styleName).toBe('Bold');
+    expect(loaded.meta.unitsPerEm).toBe(2048);
+    expect(loaded.meta.ascender).toBe(1500);
+    expect(loaded.meta.descender).toBe(-500);
+    expect(loaded.meta.capHeight).toBe(1200);
+    expect(loaded.meta.xHeight).toBe(900);
+  });
+
+  it('applyMutation(glyph): upserts glyph + fans out to layers', async () => {
+    const { adapter } = makeAdapter();
+    const projectId = await adapter.createProject('Test');
+    const font0 = await adapter.loadFont(projectId);
+    const masterId = font0.masters[0]!.id;
+    const g1 = newId();
+    const font = fontWithGlyphs(projectId, masterId, [g1]);
+    await adapter.applyMutation(projectId, { kind: 'glyph', glyphId: g1 }, font);
+    const loaded = await adapter.loadFont(projectId);
+    expect(loaded.glyphs[g1]).toBeDefined();
+    expect(loaded.glyphs[g1]!.name).toBe('g0');
+    expect(loaded.glyphs[g1]!.layers).toHaveLength(1);
+    expect(loaded.glyphs[g1]!.layers[0]!.contours[0]!.points).toHaveLength(2);
+  });
+
+  it('applyMutation(glyph): deletes glyph + layers when glyph removed from font', async () => {
+    const { adapter } = makeAdapter();
+    const projectId = await adapter.createProject('Test');
+    const font0 = await adapter.loadFont(projectId);
+    const masterId = font0.masters[0]!.id;
+    const g1 = newId();
+    const fontWith = fontWithGlyphs(projectId, masterId, [g1]);
+    await adapter.saveFont(projectId, fontWith);
+    // Now apply a glyph mutation for a glyph that no longer exists in `font`.
+    const fontWithout: Font = {
+      ...fontWith,
+      glyphs: {},
+      glyphOrder: [],
+    };
+    await adapter.applyMutation(projectId, { kind: 'glyph', glyphId: g1 }, fontWithout);
+    const loaded = await adapter.loadFont(projectId);
+    expect(loaded.glyphs[g1]).toBeUndefined();
+    expect(loaded.glyphOrder).not.toContain(g1);
+  });
+
+  it('applyMutation(layer): upserts the single layer row', async () => {
+    const { adapter } = makeAdapter();
+    const projectId = await adapter.createProject('Test');
+    const font0 = await adapter.loadFont(projectId);
+    const masterId = font0.masters[0]!.id;
+    const g1 = newId();
+    const fontWith = fontWithGlyphs(projectId, masterId, [g1]);
+    await adapter.saveFont(projectId, fontWith);
+    const existing = fontWith.glyphs[g1]!;
+    const originalLayer = existing.layers[0]!;
+    const edited: Font = {
+      ...fontWith,
+      glyphs: {
+        [g1]: {
+          ...existing,
+          layers: [
+            {
+              ...originalLayer,
+              contours: [
+                {
+                  ...originalLayer.contours[0]!,
+                  points: [{ id: `${g1}-P0`, x: 7, y: 9, type: 'line' as const, smooth: false }],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    };
+    await adapter.applyMutation(
+      projectId,
+      { kind: 'layer', glyphId: g1, layerId: originalLayer.id },
+      edited,
+    );
+    const loaded = await adapter.loadFont(projectId);
+    const pt = loaded.glyphs[g1]?.layers[0]?.contours[0]?.points[0];
+    expect(pt?.x).toBe(7);
+    expect(pt?.y).toBe(9);
+  });
+
+  it('applyMutation(layer): deletes a removed layer without throwing', async () => {
+    const { adapter } = makeAdapter();
+    const projectId = await adapter.createProject('Test');
+    const font0 = await adapter.loadFont(projectId);
+    const masterId = font0.masters[0]!.id;
+    const g1 = newId();
+    const fontWith = fontWithGlyphs(projectId, masterId, [g1]);
+    await adapter.saveFont(projectId, fontWith);
+    // Drop the one layer from the in-memory font. applyMutation with the
+    // missing layer target should emit a DELETE and succeed.
+    const layerId = fontWith.glyphs[g1]!.layers[0]!.id;
+    const edited: Font = {
+      ...fontWith,
+      glyphs: {
+        [g1]: {
+          ...fontWith.glyphs[g1]!,
+          layers: [],
+        },
+      },
+    };
+    await expect(
+      adapter.applyMutation(projectId, { kind: 'layer', glyphId: g1, layerId }, edited),
+    ).resolves.toBeUndefined();
+    // Sanity: also works for a never-existed layer id
+    await expect(
+      adapter.applyMutation(
+        projectId,
+        { kind: 'layer', glyphId: g1, layerId: 'does-not-exist' },
+        edited,
+      ),
+    ).resolves.toBeUndefined();
+    const loaded = await adapter.loadFont(projectId);
+    expect(loaded.glyphs[g1]?.layers ?? []).toHaveLength(0);
+  });
+
+  it('applyMutation(kerning): inserts a pair via DELETE+INSERT', async () => {
+    const { adapter } = makeAdapter();
+    const projectId = await adapter.createProject('Test');
+    const font0 = await adapter.loadFont(projectId);
+    const masterId = font0.masters[0]!.id;
+    const g1 = newId();
+    const g2 = newId();
+    const baseFont = fontWithGlyphs(projectId, masterId, [g1, g2]);
+    await adapter.saveFont(projectId, baseFont);
+    const edited: Font = {
+      ...baseFont,
+      kerning: [{ leftGlyph: g1, rightGlyph: g2, value: -30 }],
+    };
+    await adapter.applyMutation(
+      projectId,
+      { kind: 'kerning', leftGlyph: g1, rightGlyph: g2 },
+      edited,
+    );
+    const loaded = await adapter.loadFont(projectId);
+    expect(loaded.kerning).toEqual([{ leftGlyph: g1, rightGlyph: g2, value: -30 }]);
+    // Updating the same pair replaces the value.
+    const edited2: Font = {
+      ...edited,
+      kerning: [{ leftGlyph: g1, rightGlyph: g2, value: 50 }],
+    };
+    await adapter.applyMutation(
+      projectId,
+      { kind: 'kerning', leftGlyph: g1, rightGlyph: g2 },
+      edited2,
+    );
+    const loaded2 = await adapter.loadFont(projectId);
+    expect(loaded2.kerning).toEqual([{ leftGlyph: g1, rightGlyph: g2, value: 50 }]);
+    // Removing the pair (not present in font.kerning) deletes it.
+    const edited3: Font = { ...edited2, kerning: [] };
+    await adapter.applyMutation(
+      projectId,
+      { kind: 'kerning', leftGlyph: g1, rightGlyph: g2 },
+      edited3,
+    );
+    const loaded3 = await adapter.loadFont(projectId);
+    expect(loaded3.kerning).toEqual([]);
+  });
+
+  it('applyMutation(component): rejects with NotImplemented', async () => {
+    const { adapter } = makeAdapter();
+    const projectId = await adapter.createProject('Test');
+    const font = await adapter.loadFont(projectId);
+    await expect(
+      adapter.applyMutation(projectId, { kind: 'component', componentId: 'c1' }, font),
+    ).rejects.toThrow(/NotImplemented: component mutations/);
   });
 
   it('persists edits to an existing glyph across saves', async () => {
