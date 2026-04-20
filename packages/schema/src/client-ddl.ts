@@ -63,9 +63,3 @@ export function getClientMigrations(): readonly Migration[] {
 export function getServerDDL(): string {
   return migrations.map((m) => m.sql).join('\n\n');
 }
-
-/**
- * @deprecated Use the `schema_versions` table. Retained for legacy load path;
- * will be removed after one release cycle.
- */
-export const MIGRATION_VERSION = 1;

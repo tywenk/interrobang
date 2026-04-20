@@ -111,9 +111,7 @@ export const projectBlobs = sqliteTable(
 );
 
 // Per-migration version tracking. Each applied migration inserts a row with
-// the migration number and the epoch-ms timestamp it was applied. Replaces
-// the single `PRAGMA user_version` integer previously driven by
-// `MIGRATION_VERSION`.
+// the migration number and the epoch-ms timestamp it was applied.
 export const schemaVersions = sqliteTable('schema_versions', {
   version: integer('version').primaryKey(),
   appliedAt: integer('applied_at').notNull(),
