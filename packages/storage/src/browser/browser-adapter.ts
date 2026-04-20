@@ -125,6 +125,12 @@ export class BrowserStorageAdapter implements StorageAdapter {
     };
   }
 
+  /**
+   * Full-font upsert. Prefer `applyMutation` for incremental edits.
+   * Kept for (a) import flows (`ImportButton`), (b) when the save loop flushes
+   * with no recorded mutations (e.g. undo/redo or legacy path when
+   * `INCREMENTAL_SAVE=false`).
+   */
   async saveFont(projectId: string, font: Font): Promise<void> {
     await this.db.exec('BEGIN');
     try {
