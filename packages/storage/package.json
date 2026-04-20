@@ -10,6 +10,7 @@
   "dependencies": {
     "@interrobang/core": "workspace:*",
     "@interrobang/schema": "workspace:*",
+    "drizzle-orm": "0.45.2",
     "wa-sqlite": "1.0.0"
   },
   "devDependencies": {

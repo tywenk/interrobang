@@ -128,19 +128,22 @@ async function applyOne(
       const pair = font.kerning.find(
         (k) => k.leftGlyph === target.leftGlyph && k.rightGlyph === target.rightGlyph,
       );
-      // Delete-then-insert pattern. kerning_pairs has a composite PRIMARY KEY
-      // on (project_id, left_glyph, right_glyph), so an ON CONFLICT upsert
-      // would work, but Phase 4b intentionally defers the upsert path to
-      // Phase 5 (storage polish) alongside the schema_versions table work.
-      await db.mutate(
-        'DELETE FROM kerning_pairs WHERE project_id = ? AND left_glyph = ? AND right_glyph = ?',
-        [projectId, target.leftGlyph, target.rightGlyph],
-      );
       if (pair) {
+        // `kerning_pairs` has a composite PRIMARY KEY on
+        // (project_id, left_glyph, right_glyph), so ON CONFLICT upsert is
+        // clean and avoids the extra DELETE round-trip.
         await db.mutate(
           `INSERT INTO kerning_pairs(project_id, left_glyph, right_glyph, value, revision)
-           VALUES (?, ?, ?, ?, 0)`,
+           VALUES (?, ?, ?, ?, 0)
+           ON CONFLICT(project_id, left_glyph, right_glyph) DO UPDATE SET
+             value = excluded.value,
+             revision = excluded.revision`,
           [projectId, pair.leftGlyph, pair.rightGlyph, pair.value],
+        );
+      } else {
+        await db.mutate(
+          'DELETE FROM kerning_pairs WHERE project_id = ? AND left_glyph = ? AND right_glyph = ?',
+          [projectId, target.leftGlyph, target.rightGlyph],
         );
       }
       return;
