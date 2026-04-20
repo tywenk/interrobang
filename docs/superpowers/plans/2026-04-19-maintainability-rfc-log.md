@@ -15,16 +15,23 @@ Executed on branch `refactor/maintainability-rfc`. Plan: `./2026-04-19-maintaina
 | 5 | Storage polish | 77 → 85 | Versioned blobs, schema_versions table, components tables scaffold, Drizzle reads |
 | 6 | Package surface | 85 → 90 | tsup builds per package, `source` export condition, `extraMetrics` on FontMeta |
 | 7 | Docs + TODO seeds | 90 → 90 | README, `TODO(components)` markers, this log |
+| 8 | Post-RFC cleanup | 90 → 95 | Selection set-equality guard, reverse-affects for undo/redo, `INCREMENTAL_SAVE` and `MIGRATION_VERSION` removed |
 
 ## Decisions made
 
 - **D1 Multi-master:** kept soft. `Glyph.layers[]` stays; editor still operates on `layers[0]`. `activeMasterId` not yet threaded — deferred to whenever multi-master UI lands.
 - **D2 Drizzle:** kept as source of truth for DDL. READ paths in `BrowserStorageAdapter` now use `drizzle-orm/sqlite-proxy`; writes stayed hand-SQL.
-- **D3 Exports + build:** landed in Phase 6. `tsup` per package; the Vite-consumer + worker URL path preserved via a `source` export condition + `resolve.conditions`.
+- **D3 Exports + build:** landed in Phase 6. `tsup` per package; Vite resolves workspace packages via explicit aliases to `src/` (the `source` export condition wasn't honored reliably by Vite's dep optimizer).
 
-## Follow-ups noted but deferred
+## Phase 8 — post-RFC follow-ups
 
-- Drop `MIGRATION_VERSION` export from `@interrobang/schema` after one release cycle (currently `@deprecated`, value `1`).
-- Remove the `INCREMENTAL_SAVE` feature flag after a release cycle of production bake.
-- Compute reverse-`affects` for undo/redo so those paths stop routing through `saveFont`. Tracked by `TODO(incremental-undo)` in `project-store.ts`.
-- Selection `Set` identity: `useCanvasInput` emits a fresh set on every mouse-down. Harmless today, but if consumers diff on identity this will cause noise.
+All four items from the original "Follow-ups noted but deferred" list landed on the same branch:
+
+- **Reverse-affects for undo/redo.** `UndoRedoStack.{undo,redo}` now return `{ state, command }`; `project-store` unions the reverted command's `affects` into `pendingMutations`. `Command.affects` is required (no longer optional) — every command declares its storage footprint at the type level.
+- **`INCREMENTAL_SAVE` flag removed.** With reverse-affects in place, there is no path that flushes with empty targets for interactive edits. `SaveLoop` applies mutations only; empty `scheduleMutations` is a no-op. `saveFont` kept on the adapter purely for import.
+- **`MIGRATION_VERSION` export removed.** No runtime readers — the schema-version source of truth is the `schema_versions` table.
+- **Selection `Set` identity.** `useCanvasInput.onSelectionChange` now fires only when the computed set actually differs from the current one.
+
+## Remaining follow-ups
+
+None currently tracked.
