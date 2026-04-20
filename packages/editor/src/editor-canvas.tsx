@@ -15,41 +15,45 @@ export interface LiveEditEvent {
 export type LiveEditListener = (e: LiveEditEvent) => void;
 
 export interface EditorCanvasHandle {
-  setGlyph(glyph: Glyph): void;
-  setSelection(ids: ReadonlySet<string>): void;
-  setTool(tool: 'select' | 'pen'): void;
   fitToView(): void;
   on(event: 'liveEdit', cb: LiveEditListener): () => void;
 }
 
 export interface EditorCanvasProps {
-  initialGlyph: Glyph;
+  glyph: Glyph;
+  selection: ReadonlySet<string>;
+  tool: 'select' | 'pen';
   onCommitMove?: (pointIds: readonly string[], dx: number, dy: number) => void;
   onSelectionChange?: (ids: ReadonlySet<string>) => void;
   onPenClick?: (fontX: number, fontY: number) => void;
 }
 
+interface DragState {
+  pointIds: readonly string[];
+  startFontX: number;
+  startFontY: number;
+  lastDx: number;
+  lastDy: number;
+}
+
 const INITIAL_SIZE = { width: 800, height: 600 };
 
 export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(function EditorCanvas(
-  { initialGlyph, onCommitMove, onSelectionChange, onPenClick },
+  { glyph, selection, tool, onCommitMove, onSelectionChange, onPenClick },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const stateRef = useRef({
-    glyph: initialGlyph,
-    selection: new Set<string>(),
-    tool: 'select' as 'select' | 'pen',
-    drag: null as null | {
-      pointIds: string[];
-      startFontX: number;
-      startFontY: number;
-      lastDx: number;
-      lastDy: number;
-    },
-    fitted: false,
-  });
+
+  // Prop mirrors so event handlers read fresh state without re-subscribing.
+  const glyphRef = useRef(glyph);
+  const selectionRef = useRef<ReadonlySet<string>>(selection);
+  const toolRef = useRef(tool);
+  const prevGlyphIdRef = useRef(glyph.id);
+
+  const dragRef = useRef<DragState | null>(null);
+  const fittedRef = useRef(false);
+
   const viewportRef = useRef(
     new Viewport({ canvasWidth: INITIAL_SIZE.width, canvasHeight: INITIAL_SIZE.height }),
   );
@@ -70,8 +74,13 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const layer = stateRef.current.glyph.layers[0];
-      if (layer) drawLayer(ctx, layer, viewportRef.current, stateRef.current.selection);
+      const drag = dragRef.current;
+      const drawnGlyph =
+        drag && (drag.lastDx !== 0 || drag.lastDy !== 0)
+          ? previewMove(glyphRef.current, drag.pointIds, drag.lastDx, drag.lastDy)
+          : glyphRef.current;
+      const layer = drawnGlyph.layers[0];
+      if (layer) drawLayer(ctx, layer, viewportRef.current, selectionRef.current);
     });
   }
 
@@ -92,17 +101,38 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     // substantially — typical when the first measurement happened during a
     // layout transition and the real size arrived via ResizeObserver.
     const grew =
-      stateRef.current.fitted &&
+      fittedRef.current &&
       (cssWidth > prev.width * 1.5 ||
         cssHeight > prev.height * 1.5 ||
         cssWidth * 1.5 < prev.width ||
         cssHeight * 1.5 < prev.height);
-    if (!stateRef.current.fitted || grew) {
-      viewportRef.current.fitToGlyph(stateRef.current.glyph);
-      stateRef.current.fitted = true;
+    if (!fittedRef.current || grew) {
+      viewportRef.current.fitToGlyph(glyphRef.current);
+      fittedRef.current = true;
     }
     scheduleDraw();
   }
+
+  // Keep refs in sync with the latest props. useLayoutEffect so event
+  // handlers invoked before the next paint see fresh values.
+  useLayoutEffect(() => {
+    glyphRef.current = glyph;
+    const prevId = prevGlyphIdRef.current;
+    if (glyph.id !== prevId) {
+      viewportRef.current.fitToGlyph(glyph);
+      prevGlyphIdRef.current = glyph.id;
+    }
+    scheduleDraw();
+  }, [glyph]);
+
+  useLayoutEffect(() => {
+    selectionRef.current = selection;
+    scheduleDraw();
+  }, [selection]);
+
+  useLayoutEffect(() => {
+    toolRef.current = tool;
+  }, [tool]);
 
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -123,23 +153,8 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
   useImperativeHandle(
     ref,
     () => ({
-      setGlyph(glyph) {
-        const prevId = stateRef.current.glyph.id;
-        stateRef.current.glyph = glyph;
-        if (glyph.id !== prevId) {
-          viewportRef.current.fitToGlyph(glyph);
-        }
-        scheduleDraw();
-      },
-      setSelection(ids) {
-        stateRef.current.selection = new Set(ids);
-        scheduleDraw();
-      },
-      setTool(tool) {
-        stateRef.current.tool = tool;
-      },
       fitToView() {
-        viewportRef.current.fitToGlyph(stateRef.current.glyph);
+        viewportRef.current.fitToGlyph(glyphRef.current);
         scheduleDraw();
       },
       on(_event, cb) {
@@ -160,10 +175,10 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     const rect = canvasRef.current!.getBoundingClientRect();
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
-    const layer = stateRef.current.glyph.layers[0];
+    const layer = glyphRef.current.layers[0];
     if (!layer) return;
 
-    if (stateRef.current.tool === 'pen') {
+    if (toolRef.current === 'pen') {
       const fontPt = viewportRef.current.screenToFont(sx, sy);
       onPenClick?.(fontPt.x, fontPt.y);
       return;
@@ -171,13 +186,12 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
 
     const hit = hitTest(layer, viewportRef.current, sx, sy, 8);
     if (hit && hit.kind === 'point') {
-      const ids = stateRef.current.selection.has(hit.pointId)
-        ? Array.from(stateRef.current.selection)
+      const ids = selectionRef.current.has(hit.pointId)
+        ? Array.from(selectionRef.current)
         : [hit.pointId];
-      stateRef.current.selection = new Set(ids);
-      onSelectionChange?.(stateRef.current.selection);
+      onSelectionChange?.(new Set(ids));
       const startFont = viewportRef.current.screenToFont(sx, sy);
-      stateRef.current.drag = {
+      dragRef.current = {
         pointIds: ids,
         startFontX: startFont.x,
         startFontY: startFont.y,
@@ -186,14 +200,13 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
       };
       scheduleDraw();
     } else {
-      stateRef.current.selection = new Set();
-      onSelectionChange?.(stateRef.current.selection);
+      onSelectionChange?.(new Set());
       scheduleDraw();
     }
   }
 
   function onMouseMove(e: ReactMouseEvent<HTMLCanvasElement>) {
-    const drag = stateRef.current.drag;
+    const drag = dragRef.current;
     if (!drag) return;
     const rect = canvasRef.current!.getBoundingClientRect();
     const sx = e.clientX - rect.left;
@@ -201,20 +214,20 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     const cur = viewportRef.current.screenToFont(sx, sy);
     const dx = cur.x - drag.startFontX;
     const dy = cur.y - drag.startFontY;
-    const stepDx = dx - drag.lastDx;
-    const stepDy = dy - drag.lastDy;
     drag.lastDx = dx;
     drag.lastDy = dy;
-    stateRef.current.glyph = previewMove(stateRef.current.glyph, drag.pointIds, stepDx, stepDy);
     emitLive({ kind: 'point-drag', pointIds: drag.pointIds, dx, dy });
     scheduleDraw();
   }
 
   function onMouseUp() {
-    const drag = stateRef.current.drag;
+    const drag = dragRef.current;
     if (drag) {
       onCommitMove?.(drag.pointIds, drag.lastDx, drag.lastDy);
-      stateRef.current.drag = null;
+      dragRef.current = null;
+      // Parent is expected to send back a new glyph; until then redraw without
+      // the preview so the canvas doesn't look stuck.
+      scheduleDraw();
     }
   }
 

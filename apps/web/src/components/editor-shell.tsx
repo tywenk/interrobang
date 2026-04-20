@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import type { Ref } from 'react';
 import type { Glyph } from '@interrobang/core';
 import { movePointsCommand, insertPointCommand, newId } from '@interrobang/core';
@@ -13,6 +13,8 @@ interface Props {
   canvasHandleRef?: Ref<EditorCanvasHandle>;
 }
 
+const EMPTY_SELECTION: ReadonlySet<string> = new Set();
+
 export function EditorShell({ projectId, canvasHandleRef }: Props) {
   const proj = useProjectStore((s) => s.openProjects[projectId]);
   const applyCommand = useProjectStore((s) => s.applyCommand);
@@ -21,16 +23,7 @@ export function EditorShell({ projectId, canvasHandleRef }: Props) {
   const tool = useEditorStore((s) => s.tool);
   const setSelection = useEditorStore((s) => s.setSelection);
   const activeGlyphId = useEditorStore((s) => s.activeGlyphByProject[projectId]);
-
-  const internalRef = useRef<EditorCanvasHandle | null>(null);
-  const setRefs = useCallback(
-    (handle: EditorCanvasHandle | null) => {
-      internalRef.current = handle;
-      if (typeof canvasHandleRef === 'function') canvasHandleRef(handle);
-      else if (canvasHandleRef) canvasHandleRef.current = handle;
-    },
-    [canvasHandleRef],
-  );
+  const selectionByGlyph = useEditorStore((s) => s.selectionByGlyph);
 
   const activeGlyph: Glyph | null = useMemo(() => {
     if (!proj) return null;
@@ -38,13 +31,9 @@ export function EditorShell({ projectId, canvasHandleRef }: Props) {
     return id ? (proj.font.glyphs[id] ?? null) : null;
   }, [proj, activeGlyphId]);
 
-  useEffect(() => {
-    if (internalRef.current && activeGlyph) internalRef.current.setGlyph(activeGlyph);
-  }, [activeGlyph]);
-
-  useEffect(() => {
-    internalRef.current?.setTool(tool);
-  }, [tool]);
+  const selection = activeGlyph
+    ? (selectionByGlyph[activeGlyph.id] ?? EMPTY_SELECTION)
+    : EMPTY_SELECTION;
 
   if (!proj) return <div className="p-6 text-muted-foreground">Loading project…</div>;
   if (!activeGlyph)
@@ -62,8 +51,10 @@ export function EditorShell({ projectId, canvasHandleRef }: Props) {
   return (
     <div className="absolute inset-0">
       <EditorCanvas
-        ref={setRefs}
-        initialGlyph={currentGlyph}
+        ref={canvasHandleRef}
+        glyph={currentGlyph}
+        selection={selection}
+        tool={tool}
         onCommitMove={(pointIds, dx, dy) => {
           const layer = currentGlyph.layers[0];
           if (!layer) return;
