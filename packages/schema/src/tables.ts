@@ -27,6 +27,9 @@ export const fontMeta = sqliteTable('font_meta', {
   descender: integer('descender').notNull().default(-200),
   capHeight: integer('cap_height').notNull().default(700),
   xHeight: integer('x_height').notNull().default(500),
+  // JSON blob for script-specific metrics (CJK, Arabic, etc.). NULL when the
+  // consumer has not populated anything. Opaque to the schema.
+  extraMetricsJson: text('extra_metrics_json'),
 });
 
 export const masters = sqliteTable('masters', {

@@ -1,6 +1,6 @@
 import type { Font, MutationTarget } from '@interrobang/core';
 import type { SqliteClient } from '../worker/client.js';
-import { serializeGlyph, serializeLayer } from './serialize.js';
+import { serializeExtraMetrics, serializeGlyph, serializeLayer } from './serialize.js';
 
 export async function applyMutation(
   db: SqliteClient,
@@ -33,7 +33,7 @@ async function applyOne(
     case 'meta':
       await db.mutate(
         `UPDATE font_meta SET family_name=?, style_name=?, units_per_em=?, ascender=?, descender=?,
-                              cap_height=?, x_height=? WHERE project_id=?`,
+                              cap_height=?, x_height=?, extra_metrics_json=? WHERE project_id=?`,
         [
           font.meta.familyName,
           font.meta.styleName,
@@ -42,6 +42,7 @@ async function applyOne(
           font.meta.descender,
           font.meta.capHeight,
           font.meta.xHeight,
+          serializeExtraMetrics(font.meta.extraMetrics),
           projectId,
         ],
       );

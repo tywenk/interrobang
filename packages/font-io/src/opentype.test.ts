@@ -30,3 +30,15 @@ test('writeOTF round-trips family name and unitsPerEm', () => {
   expect(reparsed.meta.unitsPerEm).toBe(font.meta.unitsPerEm);
   expect(reparsed.glyphOrder.length).toBeGreaterThan(0);
 });
+
+test('writeOTF round-trips FontMeta.extraMetrics via OS/2', () => {
+  const base = parseOTF(sample.buffer as ArrayBuffer);
+  const withExtras = {
+    ...base,
+    meta: { ...base.meta, extraMetrics: { sTypoLineGap: 123, usWinAscent: 1777 } },
+  };
+  const bytes = writeOTF(withExtras);
+  const reparsed = parseOTF(bytes);
+  expect(reparsed.meta.extraMetrics?.sTypoLineGap).toBe(123);
+  expect(reparsed.meta.extraMetrics?.usWinAscent).toBe(1777);
+});

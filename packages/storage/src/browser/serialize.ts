@@ -75,3 +75,36 @@ export function serializeGlyph(g: Glyph): {
     revision: g.revision,
   };
 }
+
+/**
+ * Stringify `FontMeta.extraMetrics` for the `font_meta.extra_metrics_json`
+ * column. Returns `null` when `extras` is undefined or empty so we store NULL
+ * instead of `"{}"` and legacy rows stay as NULL after a round-trip with no
+ * extras. No version wrapper: the record is the serialized form.
+ */
+export function serializeExtraMetrics(
+  extras: Readonly<Record<string, number>> | undefined,
+): string | null {
+  if (!extras) return null;
+  const keys = Object.keys(extras);
+  if (keys.length === 0) return null;
+  return JSON.stringify(extras);
+}
+
+/**
+ * Parse the `font_meta.extra_metrics_json` column into the
+ * `FontMeta.extraMetrics` shape. Returns `undefined` for NULL / empty so the
+ * optional field stays absent on the in-memory object.
+ */
+export function deserializeExtraMetrics(
+  raw: string | null | undefined,
+): Record<string, number> | undefined {
+  if (raw === null || raw === undefined || raw === '') return undefined;
+  const parsed: unknown = JSON.parse(raw);
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return undefined;
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+    if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}

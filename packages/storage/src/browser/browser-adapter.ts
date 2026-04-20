@@ -5,7 +5,13 @@ import { drizzle, type SqliteRemoteDatabase } from 'drizzle-orm/sqlite-proxy';
 import type { SqliteClient } from '../worker/client.js';
 import type { ProjectSummary, StorageAdapter } from '../adapter.js';
 import { applyMutation } from './apply-mutation.js';
-import { deserializeLayer, serializeGlyph, serializeLayer } from './serialize.js';
+import {
+  deserializeExtraMetrics,
+  deserializeLayer,
+  serializeExtraMetrics,
+  serializeGlyph,
+  serializeLayer,
+} from './serialize.js';
 
 const schema = tables;
 type DrizzleDb = SqliteRemoteDatabase<typeof schema>;
@@ -74,8 +80,8 @@ export class BrowserStorageAdapter implements StorageAdapter {
       [masterId, id, 'Regular'],
     );
     await this.db.mutate(
-      `INSERT INTO font_meta(project_id, family_name, style_name, units_per_em, ascender, descender, cap_height, x_height)
-       VALUES (?, ?, 'Regular', 1000, 800, -200, 700, 500)`,
+      `INSERT INTO font_meta(project_id, family_name, style_name, units_per_em, ascender, descender, cap_height, x_height, extra_metrics_json)
+       VALUES (?, ?, 'Regular', 1000, 800, -200, 700, 500, NULL)`,
       [id, name],
     );
     return id;
@@ -151,6 +157,7 @@ export class BrowserStorageAdapter implements StorageAdapter {
       order.push(g.id);
     }
 
+    const extra = deserializeExtraMetrics(meta.extraMetricsJson);
     return {
       id: projRow.id,
       meta: {
@@ -161,6 +168,7 @@ export class BrowserStorageAdapter implements StorageAdapter {
         descender: meta.descender,
         capHeight: meta.capHeight,
         xHeight: meta.xHeight,
+        ...(extra ? { extraMetrics: extra } : {}),
       },
       masters: masterRows.map((m) => ({
         id: m.id,
@@ -190,7 +198,7 @@ export class BrowserStorageAdapter implements StorageAdapter {
     try {
       await this.db.mutate(
         `UPDATE font_meta SET family_name=?, style_name=?, units_per_em=?, ascender=?, descender=?,
-                              cap_height=?, x_height=? WHERE project_id=?`,
+                              cap_height=?, x_height=?, extra_metrics_json=? WHERE project_id=?`,
         [
           font.meta.familyName,
           font.meta.styleName,
@@ -199,6 +207,7 @@ export class BrowserStorageAdapter implements StorageAdapter {
           font.meta.descender,
           font.meta.capHeight,
           font.meta.xHeight,
+          serializeExtraMetrics(font.meta.extraMetrics),
           projectId,
         ],
       );

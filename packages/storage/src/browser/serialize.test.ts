@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import type { Layer } from '@interrobang/core';
-import { BLOB_VERSION, deserializeLayer, serializeLayer } from './serialize.js';
+import {
+  BLOB_VERSION,
+  deserializeExtraMetrics,
+  deserializeLayer,
+  serializeExtraMetrics,
+  serializeLayer,
+} from './serialize.js';
 
 function sampleLayer(): Layer {
   return {
@@ -82,5 +88,27 @@ describe('serializeLayer / deserializeLayer', () => {
     expect(layer.contours).toEqual(contours);
     expect(layer.components).toEqual([]);
     expect(layer.anchors).toEqual([]);
+  });
+});
+
+describe('serializeExtraMetrics / deserializeExtraMetrics', () => {
+  it('returns null/undefined for empty and null inputs', () => {
+    expect(serializeExtraMetrics(undefined)).toBeNull();
+    expect(serializeExtraMetrics({})).toBeNull();
+    expect(deserializeExtraMetrics(null)).toBeUndefined();
+    expect(deserializeExtraMetrics(undefined)).toBeUndefined();
+    expect(deserializeExtraMetrics('')).toBeUndefined();
+  });
+
+  it('round-trips numeric entries', () => {
+    const src = { sTypoLineGap: 90, usWinAscent: 1400 };
+    const json = serializeExtraMetrics(src);
+    expect(typeof json).toBe('string');
+    expect(deserializeExtraMetrics(json)).toEqual(src);
+  });
+
+  it('drops non-finite and non-number values on parse', () => {
+    const json = JSON.stringify({ good: 12, bad: 'nope', nan: null });
+    expect(deserializeExtraMetrics(json)).toEqual({ good: 12 });
   });
 });

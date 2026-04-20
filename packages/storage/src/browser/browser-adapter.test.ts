@@ -316,6 +316,34 @@ describe('BrowserStorageAdapter', () => {
     ).rejects.toThrow(/NotImplemented: component mutations/);
   });
 
+  it('saves and reloads FontMeta.extraMetrics', async () => {
+    const { adapter } = makeAdapter();
+    const projectId = await adapter.createProject('Test');
+    const font = await adapter.loadFont(projectId);
+    // Fresh project starts with no extras.
+    expect(font.meta.extraMetrics).toBeUndefined();
+    const edited: Font = {
+      ...font,
+      meta: { ...font.meta, extraMetrics: { sTypoLineGap: 90, usWinAscent: 1200 } },
+    };
+    await adapter.saveFont(projectId, edited);
+    const loaded = await adapter.loadFont(projectId);
+    expect(loaded.meta.extraMetrics).toEqual({ sTypoLineGap: 90, usWinAscent: 1200 });
+    // applyMutation(meta) updates the same column and preserves extras.
+    const edited2: Font = {
+      ...loaded,
+      meta: { ...loaded.meta, extraMetrics: { hangingBaseline: 800 } },
+    };
+    await adapter.applyMutation(projectId, { kind: 'meta', projectId }, edited2);
+    const loaded2 = await adapter.loadFont(projectId);
+    expect(loaded2.meta.extraMetrics).toEqual({ hangingBaseline: 800 });
+    // Clearing extras back to undefined round-trips as NULL.
+    const edited3: Font = { ...loaded2, meta: { ...loaded2.meta, extraMetrics: undefined } };
+    await adapter.applyMutation(projectId, { kind: 'meta', projectId }, edited3);
+    const loaded3 = await adapter.loadFont(projectId);
+    expect(loaded3.meta.extraMetrics).toBeUndefined();
+  });
+
   it('persists edits to an existing glyph across saves', async () => {
     const { adapter } = makeAdapter();
     const projectId = await adapter.createProject('Test');
