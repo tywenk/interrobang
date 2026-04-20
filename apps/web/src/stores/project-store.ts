@@ -2,11 +2,21 @@ import { create } from 'zustand';
 import {
   addGlyphCommand,
   createGlyph,
+  unionAffects,
   UndoRedoStack,
   type Command,
   type Font,
+  type MutationTarget,
 } from '@interrobang/core';
 import { useEditorStore } from './editor-store';
+
+/**
+ * Feature flag: drive auto-save from per-command `affects` targets via
+ * `StorageAdapter.applyMutation`. When false, the save loop falls back to
+ * the legacy whole-font `saveFont` rewrite. Flip to `false` to roll back
+ * incremental save without touching the commit graph.
+ */
+export const INCREMENTAL_SAVE = true;
 
 export interface OpenProject {
   id: string;
@@ -20,6 +30,11 @@ interface ProjectState {
   openProjects: { [id: string]: OpenProject };
   openOrder: string[];
   activeId: string | null;
+  /**
+   * MutationTargets accumulated since the last successful save, per project.
+   * An empty/missing entry means "flush via full saveFont" (the legacy path).
+   */
+  pendingMutations: { [id: string]: readonly MutationTarget[] };
 
   addOpenProject: (p: Omit<OpenProject, 'undoStack' | 'dirty'>) => void;
   closeProject: (id: string) => void;
@@ -35,6 +50,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   openProjects: {},
   openOrder: [],
   activeId: null,
+  pendingMutations: {},
 
   addOpenProject(p) {
     set((s) => {
@@ -54,9 +70,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set((s) => {
       const rest = { ...s.openProjects };
       delete rest[id];
+      const restPending = { ...s.pendingMutations };
+      delete restPending[id];
       const order = s.openOrder.filter((x) => x !== id);
       const activeId = s.activeId === id ? (order[order.length - 1] ?? null) : s.activeId;
-      return { openProjects: rest, openOrder: order, activeId };
+      return {
+        openProjects: rest,
+        openOrder: order,
+        activeId,
+        pendingMutations: restPending,
+      };
     });
   },
 
@@ -68,9 +91,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const proj = get().openProjects[id];
     if (!proj) return;
     const nextFont = proj.undoStack.apply(proj.font, cmd);
-    set((s) => ({
-      openProjects: { ...s.openProjects, [id]: { ...proj, font: nextFont, dirty: true } },
-    }));
+    set((s) => {
+      const prevPending = s.pendingMutations[id] ?? [];
+      const cmdAffects = cmd.affects ?? [];
+      // Flag off → always empty, which routes flush through saveFont.
+      const mergedPending = INCREMENTAL_SAVE ? unionAffects(prevPending, cmdAffects) : [];
+      return {
+        openProjects: { ...s.openProjects, [id]: { ...proj, font: nextFont, dirty: true } },
+        pendingMutations: { ...s.pendingMutations, [id]: mergedPending },
+      };
+    });
   },
 
   undo(id) {
@@ -78,8 +108,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     if (!proj) return;
     const next = proj.undoStack.undo(proj.font);
     if (!next) return;
+    // TODO(incremental-undo): compute reverse affects properly once the data
+    // model supports it. For now, fall back to a full saveFont on revert —
+    // partial writes of a reverted state would be worse than a one-off full
+    // rewrite.
     set((s) => ({
       openProjects: { ...s.openProjects, [id]: { ...proj, font: next, dirty: true } },
+      pendingMutations: { ...s.pendingMutations, [id]: [] },
     }));
   },
 
@@ -88,17 +123,24 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     if (!proj) return;
     const next = proj.undoStack.redo(proj.font);
     if (!next) return;
+    // TODO(incremental-undo): mirrors undo above.
     set((s) => ({
       openProjects: { ...s.openProjects, [id]: { ...proj, font: next, dirty: true } },
+      pendingMutations: { ...s.pendingMutations, [id]: [] },
     }));
   },
 
   markClean(id) {
     const proj = get().openProjects[id];
     if (!proj) return;
-    set((s) => ({
-      openProjects: { ...s.openProjects, [id]: { ...proj, dirty: false } },
-    }));
+    set((s) => {
+      const restPending = { ...s.pendingMutations };
+      delete restPending[id];
+      return {
+        openProjects: { ...s.openProjects, [id]: { ...proj, dirty: false } },
+        pendingMutations: restPending,
+      };
+    });
   },
 
   addGlyph(projectId, char) {

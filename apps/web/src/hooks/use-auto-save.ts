@@ -8,7 +8,9 @@ export function useAutoSave(projectId: string): void {
     const unsub = useProjectStore.subscribe((s, prev) => {
       const cur = s.openProjects[projectId];
       const old = prev.openProjects[projectId];
-      if (cur && cur.dirty && cur !== old) saveLoop.schedule(projectId);
+      if (!cur || !cur.dirty || cur === old) return;
+      const pending = s.pendingMutations[projectId] ?? [];
+      saveLoop.scheduleMutations(projectId, pending);
     });
     return () => {
       unsub();
