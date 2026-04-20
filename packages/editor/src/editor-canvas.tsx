@@ -1,7 +1,7 @@
 import { useCallback, useImperativeHandle, useRef, forwardRef } from 'react';
 import type { RefObject } from 'react';
 import type { Glyph } from '@interrobang/core';
-import { drawLayer } from './render.js';
+import { drawLayer, previewMove } from './render.js';
 import type { Viewport } from './viewport.js';
 import { useCanvasSize } from './use-canvas-size.js';
 import { useCanvasInput } from './use-canvas-input.js';
@@ -118,17 +118,3 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     </div>
   );
 });
-
-function previewMove(glyph: Glyph, pointIds: readonly string[], dx: number, dy: number): Glyph {
-  const ids = new Set(pointIds);
-  return {
-    ...glyph,
-    layers: glyph.layers.map((layer) => ({
-      ...layer,
-      contours: layer.contours.map((c) => ({
-        ...c,
-        points: c.points.map((p) => (ids.has(p.id) ? { ...p, x: p.x + dx, y: p.y + dy } : p)),
-      })),
-    })),
-  };
-}
