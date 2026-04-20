@@ -6,7 +6,7 @@ import { EditorCanvas, type EditorCanvasHandle } from '@interrobang/editor';
 import { useProjectStore } from '../stores/project-store';
 import { useEditorStore } from '../stores/editor-store';
 import { Button } from '@/components/ui/button';
-import { ExportButton } from './ExportButton';
+import { ExportButton } from './export-button';
 
 interface Props {
   projectId: string;

@@ -3,7 +3,7 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getStorage } from '../services/storage';
-import { ImportButton } from '../components/ImportButton';
+import { ImportButton } from '../components/import-button';
 import type { ProjectSummary } from '@interrobang/storage';
 
 export function ProjectPickerPage() {
