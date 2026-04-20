@@ -4,6 +4,7 @@ export type { Font, FontMeta, Master, KerningPair } from './font.js';
 export { nanoid as newId } from 'nanoid';
 export type { Command } from './commands/command.js';
 export { UndoRedoStack } from './commands/command.js';
+export type { MutationTarget } from './commands/mutation-target.js';
 export {
   movePointsCommand,
   insertPointCommand,
