@@ -8,17 +8,19 @@ import { GlyphList } from '../components/glyph-list';
 import { CoordinatesPanel } from '../components/coordinates-panel';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { useEditorKeyboardShortcuts } from '../hooks/use-keyboard-shortcuts';
+import { useAutoSave } from '../hooks/use-auto-save';
 import type { EditorCanvasHandle } from '@interrobang/editor';
 
 export function EditorPage() {
   const { projectId } = projectRoute.useParams();
-  const { storage, saveLoop } = useAppServices();
+  const { storage } = useAppServices();
   const addOpenProject = useProjectStore((s) => s.addOpenProject);
   const open = useProjectStore((s) => s.openProjects[projectId]);
   const [error, setError] = useState<string | null>(null);
   const [canvasHandle, setCanvasHandle] = useState<EditorCanvasHandle | null>(null);
 
   useEditorKeyboardShortcuts(projectId);
+  useAutoSave(projectId);
 
   useEffect(() => {
     if (open) return;
@@ -27,15 +29,6 @@ export function EditorPage() {
       .then((font) => addOpenProject({ id: projectId, name: font.meta.familyName, font }))
       .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
   }, [projectId, open, addOpenProject, storage]);
-
-  useEffect(() => {
-    const unsub = useProjectStore.subscribe((s, prev) => {
-      const cur = s.openProjects[projectId];
-      const old = prev.openProjects[projectId];
-      if (cur && cur.dirty && cur !== old) saveLoop.schedule(projectId);
-    });
-    return () => unsub();
-  }, [projectId, saveLoop]);
 
   if (error) return <div className="p-6 text-destructive">{error}</div>;
   return (
