@@ -1,20 +1,25 @@
 {
   "name": "interrobang",
   "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "type": "module",
-  "workspaces": ["packages/*", "apps/*"],
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "biome check .",
-    "format": "biome format --write .",
+    "lint": "oxlint",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
     "typecheck": "bun --filter '*' typecheck"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.0",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.2",
     "happy-dom": "20.9.0",
+    "oxfmt": "0.45.0",
+    "oxlint": "1.60.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.9"
   }

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "react-hooks"],
+  "categories": { "correctness": "error", "suspicious": "warn", "style": "off" },
+  "rules": {
+    "typescript/no-non-null-assertion": "off",
+    "react/react-in-jsx-scope": "off"
+  }
+}

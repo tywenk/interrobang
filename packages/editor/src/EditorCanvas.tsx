@@ -1,4 +1,4 @@
-import { useEffect, useImperativeHandle, useLayoutEffect, useRef, forwardRef } from 'react';
+import { useImperativeHandle, useLayoutEffect, useRef, forwardRef } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 import type { Glyph } from '@interrobang/core';
 import { Viewport } from './viewport.js';

@@ -4,7 +4,6 @@ import { emptyFont } from '../ops/glyph-ops.js';
 import {
   movePointsCommand,
   insertPointCommand,
-  removePointCommand,
   convertPointTypeCommand,
 } from './font-commands.js';
 
@@ -65,7 +64,7 @@ test('two consecutive movePoints commands on the same point set merge', () => {
   const a = movePointsCommand({ glyphId: 'g1', layerId: 'l1', contourId: 'c1', pointIds: ['p2'], dx: 1, dy: 0 });
   const b = movePointsCommand({ glyphId: 'g1', layerId: 'l1', contourId: 'c1', pointIds: ['p2'], dx: 2, dy: 0 });
   expect(a.canMergeWith?.(b)).toBe(true);
-  const merged = a.mergeWith?.(b)!;
+  const merged = a.mergeWith!(b);
   const f0 = fontWithGlyph();
   const f1 = merged.apply(f0);
   expect(f1.glyphs.g1!.layers[0]!.contours[0]!.points[1]!.x).toBe(103);
