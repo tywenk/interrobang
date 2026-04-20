@@ -8,9 +8,7 @@ export function useEditorKeyboardShortcuts(projectId: string): void {
       const target = e.target as HTMLElement | null;
       if (
         target &&
-        (target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.isContentEditable)
+        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
       )
         return;
       const mod = e.metaKey || e.ctrlKey;

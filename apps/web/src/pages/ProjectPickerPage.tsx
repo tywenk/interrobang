@@ -46,9 +46,7 @@ export function ProjectPickerPage() {
         <Button onClick={create}>New project</Button>
         <ImportButton />
       </div>
-      {error && error !== 'SINGLE_TAB' && (
-        <div className="text-destructive">{error}</div>
-      )}
+      {error && error !== 'SINGLE_TAB' && <div className="text-destructive">{error}</div>}
       <div className="space-y-2">
         {projects === null && <div className="text-muted-foreground">Loading…</div>}
         {projects?.length === 0 && <div className="text-muted-foreground">No projects yet.</div>}

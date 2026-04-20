@@ -4,11 +4,24 @@ import { updateGlyph, replaceLayer, emptyFont } from './glyph-ops.js';
 
 const layer: Layer = { id: 'l1', masterId: 'm1', contours: [], components: [], anchors: [] };
 const glyph: Glyph = {
-  id: 'g1', name: 'A', advanceWidth: 500, unicodeCodepoint: 65, layers: [layer], revision: 0,
+  id: 'g1',
+  name: 'A',
+  advanceWidth: 500,
+  unicodeCodepoint: 65,
+  layers: [layer],
+  revision: 0,
 };
 const font: Font = {
   id: 'f1',
-  meta: { familyName: 'X', styleName: 'Regular', unitsPerEm: 1000, ascender: 800, descender: -200, capHeight: 700, xHeight: 500 },
+  meta: {
+    familyName: 'X',
+    styleName: 'Regular',
+    unitsPerEm: 1000,
+    ascender: 800,
+    descender: -200,
+    capHeight: 700,
+    xHeight: 500,
+  },
   masters: [{ id: 'm1', name: 'Regular', weight: 400, width: 100 }],
   glyphs: { g1: glyph },
   glyphOrder: ['g1'],

@@ -35,7 +35,7 @@ export function EditorShell({ projectId, canvasHandleRef }: Props) {
   const activeGlyph: Glyph | null = useMemo(() => {
     if (!proj) return null;
     const id = activeGlyphId ?? proj.font.glyphOrder[0];
-    return id ? proj.font.glyphs[id] ?? null : null;
+    return id ? (proj.font.glyphs[id] ?? null) : null;
   }, [proj, activeGlyphId]);
 
   useEffect(() => {
@@ -65,9 +65,7 @@ export function EditorShell({ projectId, canvasHandleRef }: Props) {
         onCommitMove={(pointIds, dx, dy) => {
           const layer = currentGlyph.layers[0];
           if (!layer) return;
-          const contour = layer.contours.find((c) =>
-            c.points.some((p) => pointIds.includes(p.id)),
-          );
+          const contour = layer.contours.find((c) => c.points.some((p) => pointIds.includes(p.id)));
           if (!contour) return;
           applyCommand(
             projectId,
@@ -113,7 +111,5 @@ export function EditorShell({ projectId, canvasHandleRef }: Props) {
 }
 
 function requestStarterGlyph(projectId: string): void {
-  document.dispatchEvent(
-    new CustomEvent('interrobang:add-starter', { detail: { projectId } }),
-  );
+  document.dispatchEvent(new CustomEvent('interrobang:add-starter', { detail: { projectId } }));
 }

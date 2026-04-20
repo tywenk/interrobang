@@ -140,9 +140,7 @@ describe('BrowserStorageAdapter', () => {
           contours: [
             {
               ...edited.glyphs[g1]!.layers[0]!.contours[0]!,
-              points: [
-                { id: `${g1}-P0`, x: 42, y: 99, type: 'line' as const, smooth: false },
-              ],
+              points: [{ id: `${g1}-P0`, x: 42, y: 99, type: 'line' as const, smooth: false }],
             },
           ],
         },

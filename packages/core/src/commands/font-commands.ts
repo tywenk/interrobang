@@ -9,7 +9,11 @@ interface ContourTarget {
   contourId: string;
 }
 
-function withContour(font: Font, t: ContourTarget, fn: (c: Layer['contours'][number]) => Layer['contours'][number]): Font {
+function withContour(
+  font: Font,
+  t: ContourTarget,
+  fn: (c: Layer['contours'][number]) => Layer['contours'][number],
+): Font {
   return updateGlyph(font, t.glyphId, (g) => {
     const layer = g.layers.find((l) => l.id === t.layerId);
     if (!layer) return g;
@@ -45,7 +49,9 @@ export function movePointsCommand(args: MovePointsArgs): Command<Font> {
       const o = other as Command<Font> & { _dx: number; _dy: number };
       return movePointsCommand({ ...args, dx: args.dx + o._dx, dy: args.dy + o._dy });
     },
-    _ids: ids, _dx: args.dx, _dy: args.dy,
+    _ids: ids,
+    _dx: args.dx,
+    _dy: args.dy,
   } as Command<Font> & { _ids: ReadonlySet<string>; _dx: number; _dy: number };
 }
 

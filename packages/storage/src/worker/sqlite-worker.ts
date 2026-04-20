@@ -45,10 +45,7 @@ async function exec(sql: string): Promise<void> {
   await api.exec(db, sql);
 }
 
-async function run(
-  sql: string,
-  params: SqlValue[],
-): Promise<{ rows: Row[]; changes: number }> {
+async function run(sql: string, params: SqlValue[]): Promise<{ rows: Row[]; changes: number }> {
   if (!api || db === null) throw new Error('DB not open');
   const rows: Row[] = [];
   const stmt = await prepare(sql);

@@ -1,5 +1,12 @@
 import opentype from 'opentype.js';
-import { newId, type Font, type Glyph, type Layer, type Contour, type Point } from '@interrobang/core';
+import {
+  newId,
+  type Font,
+  type Glyph,
+  type Layer,
+  type Contour,
+  type Point,
+} from '@interrobang/core';
 
 /**
  * Parse an OpenType, TrueType, or OTF font into the internal {@link Font} model.

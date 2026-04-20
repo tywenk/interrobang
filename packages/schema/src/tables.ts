@@ -17,7 +17,9 @@ export const projects = sqliteTable('projects', {
 });
 
 export const fontMeta = sqliteTable('font_meta', {
-  projectId: text('project_id').primaryKey().references(() => projects.id, { onDelete: 'cascade' }),
+  projectId: text('project_id')
+    .primaryKey()
+    .references(() => projects.id, { onDelete: 'cascade' }),
   familyName: text('family_name').notNull(),
   styleName: text('style_name').notNull().default('Regular'),
   unitsPerEm: integer('units_per_em').notNull().default(1000),
@@ -29,7 +31,9 @@ export const fontMeta = sqliteTable('font_meta', {
 
 export const masters = sqliteTable('masters', {
   id: text('id').primaryKey(),
-  projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  projectId: text('project_id')
+    .notNull()
+    .references(() => projects.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   weight: integer('weight').notNull().default(400),
   width: integer('width').notNull().default(100),
@@ -39,7 +43,9 @@ export const glyphs = sqliteTable(
   'glyphs',
   {
     id: text('id').primaryKey(),
-    projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+    projectId: text('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     advanceWidth: integer('advance_width').notNull().default(500),
     unicodeCodepoint: integer('unicode_codepoint'),
@@ -52,8 +58,12 @@ export const glyphs = sqliteTable(
 
 export const layers = sqliteTable('layers', {
   id: text('id').primaryKey(),
-  glyphId: text('glyph_id').notNull().references(() => glyphs.id, { onDelete: 'cascade' }),
-  masterId: text('master_id').notNull().references(() => masters.id, { onDelete: 'cascade' }),
+  glyphId: text('glyph_id')
+    .notNull()
+    .references(() => glyphs.id, { onDelete: 'cascade' }),
+  masterId: text('master_id')
+    .notNull()
+    .references(() => masters.id, { onDelete: 'cascade' }),
   contoursJson: text('contours_json').notNull().default('[]'),
   componentsJson: text('components_json').notNull().default('[]'),
   anchorsJson: text('anchors_json').notNull().default('[]'),
@@ -62,7 +72,9 @@ export const layers = sqliteTable('layers', {
 export const kerningPairs = sqliteTable(
   'kerning_pairs',
   {
-    projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+    projectId: text('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
     leftGlyph: text('left_glyph').notNull(),
     rightGlyph: text('right_glyph').notNull(),
     value: integer('value').notNull(),
@@ -74,7 +86,9 @@ export const kerningPairs = sqliteTable(
 export const features = sqliteTable(
   'features',
   {
-    projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+    projectId: text('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
     tag: text('tag').notNull(),
     source: text('source').notNull(),
   },
@@ -84,7 +98,9 @@ export const features = sqliteTable(
 export const projectBlobs = sqliteTable(
   'project_blobs',
   {
-    projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+    projectId: text('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
     key: text('key').notNull(),
     bytes: blob('bytes').notNull(),
   },

@@ -1,9 +1,7 @@
 import type { Layer } from '@interrobang/core';
 import type { Viewport } from './viewport.js';
 
-export type HitResult =
-  | { kind: 'point'; pointId: string; contourId: string }
-  | null;
+export type HitResult = { kind: 'point'; pointId: string; contourId: string } | null;
 
 export function hitTest(
   layer: Layer,

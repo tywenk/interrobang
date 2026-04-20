@@ -74,7 +74,5 @@ function requestNewGlyph(projectId: string): void {
   if (input === null) return;
   const char = input.trim();
   if (!char) return;
-  document.dispatchEvent(
-    new CustomEvent('interrobang:add-glyph', { detail: { projectId, char } }),
-  );
+  document.dispatchEvent(new CustomEvent('interrobang:add-glyph', { detail: { projectId, char } }));
 }

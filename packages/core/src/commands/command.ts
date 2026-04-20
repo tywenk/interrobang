@@ -39,7 +39,14 @@ export class UndoRedoStack<T> {
     return cmd.apply(state);
   }
 
-  canUndo(): boolean { return this.undoStack.length > 0; }
-  canRedo(): boolean { return this.redoStack.length > 0; }
-  clear(): void { this.undoStack = []; this.redoStack = []; }
+  canUndo(): boolean {
+    return this.undoStack.length > 0;
+  }
+  canRedo(): boolean {
+    return this.redoStack.length > 0;
+  }
+  clear(): void {
+    this.undoStack = [];
+    this.redoStack = [];
+  }
 }

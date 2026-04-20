@@ -30,4 +30,3 @@ test('writeOTF round-trips family name and unitsPerEm', () => {
   expect(reparsed.meta.unitsPerEm).toBe(font.meta.unitsPerEm);
   expect(reparsed.glyphOrder.length).toBeGreaterThan(0);
 });
-

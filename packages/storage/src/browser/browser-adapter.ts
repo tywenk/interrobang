@@ -39,29 +39,25 @@ export class BrowserStorageAdapter implements StorageAdapter {
   }
 
   async loadFont(projectId: string): Promise<Font> {
-    const metaRows = await this.db.query(
-      'SELECT * FROM font_meta WHERE project_id = ?',
-      [projectId],
-    );
+    const metaRows = await this.db.query('SELECT * FROM font_meta WHERE project_id = ?', [
+      projectId,
+    ]);
     const meta = metaRows[0];
     if (!meta) throw new Error(`No project: ${projectId}`);
 
     const masterRows = await this.db.query('SELECT * FROM masters WHERE project_id = ?', [
       projectId,
     ]);
-    const glyphRows = await this.db.query('SELECT * FROM glyphs WHERE project_id = ?', [
-      projectId,
-    ]);
+    const glyphRows = await this.db.query('SELECT * FROM glyphs WHERE project_id = ?', [projectId]);
     const layerRows = await this.db.query(
       `SELECT layers.* FROM layers
        INNER JOIN glyphs ON glyphs.id = layers.glyph_id
        WHERE glyphs.project_id = ?`,
       [projectId],
     );
-    const kerningRows = await this.db.query(
-      'SELECT * FROM kerning_pairs WHERE project_id = ?',
-      [projectId],
-    );
+    const kerningRows = await this.db.query('SELECT * FROM kerning_pairs WHERE project_id = ?', [
+      projectId,
+    ]);
 
     const layersByGlyph = new Map<string, Layer[]>();
     for (const r of layerRows) {

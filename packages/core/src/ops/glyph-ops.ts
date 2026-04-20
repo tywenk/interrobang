@@ -23,8 +23,13 @@ export function emptyFont(familyName: string): Font {
   return {
     id: newId(),
     meta: {
-      familyName, styleName: 'Regular', unitsPerEm: 1000,
-      ascender: 800, descender: -200, capHeight: 700, xHeight: 500,
+      familyName,
+      styleName: 'Regular',
+      unitsPerEm: 1000,
+      ascender: 800,
+      descender: -200,
+      capHeight: 700,
+      xHeight: 500,
     },
     masters: [{ id: masterId, name: 'Regular', weight: 400, width: 100 }],
     glyphs: {},
