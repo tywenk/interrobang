@@ -1,9 +1,11 @@
-import { useCallback, useImperativeHandle, useLayoutEffect, useRef, forwardRef } from 'react';
-import type { MouseEvent as ReactMouseEvent } from 'react';
+import { useCallback, useImperativeHandle, useRef, forwardRef } from 'react';
+import type { RefObject } from 'react';
 import type { Glyph } from '@interrobang/core';
 import { drawLayer } from './render.js';
-import { hitTest } from './hit-test.js';
+import type { Viewport } from './viewport.js';
 import { useCanvasSize } from './use-canvas-size.js';
+import { useCanvasInput } from './use-canvas-input.js';
+import type { DragState } from './use-canvas-input.js';
 
 export interface LiveEditEvent {
   kind: 'point-drag';
@@ -28,38 +30,36 @@ export interface EditorCanvasProps {
   onPenClick?: (fontX: number, fontY: number) => void;
 }
 
-interface DragState {
-  pointIds: readonly string[];
-  startFontX: number;
-  startFontY: number;
-  lastDx: number;
-  lastDy: number;
-}
-
 export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(function EditorCanvas(
   { glyph, selection, tool, onCommitMove, onSelectionChange, onPenClick },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  // Prop mirrors so event handlers read fresh state without re-subscribing.
-  const glyphRef = useRef(glyph);
-  const selectionRef = useRef<ReadonlySet<string>>(selection);
-  const toolRef = useRef(tool);
-  const prevGlyphIdRef = useRef(glyph.id);
-
-  const dragRef = useRef<DragState | null>(null);
   const liveListenersRef = useRef(new Set<LiveEditListener>());
 
+  // Refs mirroring props/hook state so the rAF draw callback always reads
+  // fresh values even if React hasn't yet committed a re-render.
+  const glyphRef = useRef(glyph);
+  const selectionRef = useRef(selection);
+  glyphRef.current = glyph;
+  selectionRef.current = selection;
+
+  // Forward-declared accessors for values the draw callback needs but which
+  // originate from hooks that run after this closure is created.
+  const viewportRef = useRef<Viewport | null>(null);
+  const dragRefRef = useRef<RefObject<DragState> | null>(null);
+
   const draw = useCallback((ctx: CanvasRenderingContext2D) => {
-    const drag = dragRef.current;
+    const vp = viewportRef.current;
+    if (!vp) return;
+    const drag = dragRefRef.current?.current;
     const drawnGlyph =
-      drag && (drag.lastDx !== 0 || drag.lastDy !== 0)
+      drag && drag.kind === 'dragging' && (drag.lastDx !== 0 || drag.lastDy !== 0)
         ? previewMove(glyphRef.current, drag.pointIds, drag.lastDx, drag.lastDy)
         : glyphRef.current;
     const layer = drawnGlyph.layers[0];
-    if (layer) drawLayer(ctx, layer, viewportRef.current!, selectionRef.current);
+    if (layer) drawLayer(ctx, layer, vp, selectionRef.current);
   }, []);
 
   const { viewport, scheduleDraw, fitToGlyph } = useCanvasSize({
@@ -68,29 +68,25 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     glyph,
     draw,
   });
-  const viewportRef = useRef(viewport);
   viewportRef.current = viewport;
 
-  // Keep refs in sync with the latest props. useLayoutEffect so event
-  // handlers invoked before the next paint see fresh values.
-  useLayoutEffect(() => {
-    glyphRef.current = glyph;
-    const prevId = prevGlyphIdRef.current;
-    if (glyph.id !== prevId) {
-      viewport.fitToGlyph(glyph);
-      prevGlyphIdRef.current = glyph.id;
-    }
-    scheduleDraw();
-  }, [glyph, viewport, scheduleDraw]);
+  const emitLive = useCallback((e: LiveEditEvent) => {
+    for (const cb of liveListenersRef.current) cb(e);
+  }, []);
 
-  useLayoutEffect(() => {
-    selectionRef.current = selection;
-    scheduleDraw();
-  }, [selection, scheduleDraw]);
-
-  useLayoutEffect(() => {
-    toolRef.current = tool;
-  }, [tool]);
+  const { dragRef, onMouseDown, onMouseMove, onMouseUp } = useCanvasInput({
+    canvasRef,
+    viewport,
+    glyph,
+    selection,
+    tool,
+    onSelectionChange,
+    onCommitMove,
+    onPenClick,
+    emitLive,
+    scheduleDraw,
+  });
+  dragRefRef.current = dragRef;
 
   useImperativeHandle(
     ref,
@@ -107,70 +103,6 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     }),
     [fitToGlyph],
   );
-
-  function emitLive(e: LiveEditEvent): void {
-    for (const cb of liveListenersRef.current) cb(e);
-  }
-
-  function onMouseDown(e: ReactMouseEvent<HTMLCanvasElement>) {
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const sx = e.clientX - rect.left;
-    const sy = e.clientY - rect.top;
-    const layer = glyphRef.current.layers[0];
-    if (!layer) return;
-
-    if (toolRef.current === 'pen') {
-      const fontPt = viewport.screenToFont(sx, sy);
-      onPenClick?.(fontPt.x, fontPt.y);
-      return;
-    }
-
-    const hit = hitTest(layer, viewport, sx, sy, 8);
-    if (hit && hit.kind === 'point') {
-      const ids = selectionRef.current.has(hit.pointId)
-        ? Array.from(selectionRef.current)
-        : [hit.pointId];
-      onSelectionChange?.(new Set(ids));
-      const startFont = viewport.screenToFont(sx, sy);
-      dragRef.current = {
-        pointIds: ids,
-        startFontX: startFont.x,
-        startFontY: startFont.y,
-        lastDx: 0,
-        lastDy: 0,
-      };
-      scheduleDraw();
-    } else {
-      onSelectionChange?.(new Set());
-      scheduleDraw();
-    }
-  }
-
-  function onMouseMove(e: ReactMouseEvent<HTMLCanvasElement>) {
-    const drag = dragRef.current;
-    if (!drag) return;
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const sx = e.clientX - rect.left;
-    const sy = e.clientY - rect.top;
-    const cur = viewport.screenToFont(sx, sy);
-    const dx = cur.x - drag.startFontX;
-    const dy = cur.y - drag.startFontY;
-    drag.lastDx = dx;
-    drag.lastDy = dy;
-    emitLive({ kind: 'point-drag', pointIds: drag.pointIds, dx, dy });
-    scheduleDraw();
-  }
-
-  function onMouseUp() {
-    const drag = dragRef.current;
-    if (drag) {
-      onCommitMove?.(drag.pointIds, drag.lastDx, drag.lastDy);
-      dragRef.current = null;
-      // Parent is expected to send back a new glyph; until then redraw without
-      // the preview so the canvas doesn't look stuck.
-      scheduleDraw();
-    }
-  }
 
   return (
     <div ref={containerRef} className="w-full h-full relative">
