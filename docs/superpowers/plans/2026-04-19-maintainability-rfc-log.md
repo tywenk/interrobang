@@ -20,7 +20,7 @@ Executed on branch `refactor/maintainability-rfc`. Plan: `./2026-04-19-maintaina
 ## Decisions made
 
 - **D1 Multi-master:** kept soft. `Glyph.layers[]` stays; editor still operates on `layers[0]`. `activeMasterId` not yet threaded — deferred to whenever multi-master UI lands.
-- **D2 Drizzle:** kept as source of truth for DDL. READ paths in `BrowserStorageAdapter` now use `drizzle-orm/sqlite-proxy`; writes stayed hand-SQL.
+- **D2 Drizzle:** kept as source of truth for DDL and for Drizzle-inferred types exported from `@interrobang/schema`. Drizzle's sqlite-proxy query builder was tried for reads (Phase 5.4) but reverted — it threw against wa-sqlite at runtime despite passing under node:sqlite in tests. Adapter uses hand SQL with local snake_case row types in both directions.
 - **D3 Exports + build:** landed in Phase 6. `tsup` per package; Vite resolves workspace packages via explicit aliases to `src/` (the `source` export condition wasn't honored reliably by Vite's dep optimizer).
 
 ## Phase 8 — post-RFC follow-ups
