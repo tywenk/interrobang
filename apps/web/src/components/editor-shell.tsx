@@ -51,7 +51,9 @@ export function EditorShell({ projectId, canvasHandleRef }: Props) {
     return (
       <div className="p-6">
         <p className="text-muted-foreground mb-2">No glyphs in this project yet.</p>
-        <Button onClick={() => requestStarterGlyph(projectId)}>Add a glyph &quot;A&quot;</Button>
+        <Button onClick={() => useProjectStore.getState().addGlyph(projectId, 'A')}>
+          Add a glyph &quot;A&quot;
+        </Button>
       </div>
     );
 
@@ -108,8 +110,4 @@ export function EditorShell({ projectId, canvasHandleRef }: Props) {
       </div>
     </div>
   );
-}
-
-function requestStarterGlyph(projectId: string): void {
-  document.dispatchEvent(new CustomEvent('interrobang:add-starter', { detail: { projectId } }));
 }
