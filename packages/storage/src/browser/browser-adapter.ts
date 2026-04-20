@@ -1,4 +1,4 @@
-import { newId, type Font, type Glyph, type Layer } from '@interrobang/core';
+import { newId, type Font, type Glyph, type Layer, type MutationTarget } from '@interrobang/core';
 import type { SqliteClient } from '../worker/client.js';
 import type { ProjectSummary, StorageAdapter } from '../adapter.js';
 import { deserializeLayer, serializeGlyph, serializeLayer } from './serialize.js';
@@ -189,6 +189,10 @@ export class BrowserStorageAdapter implements StorageAdapter {
       await this.db.exec('ROLLBACK');
       throw err;
     }
+  }
+
+  async applyMutation(_projectId: string, _target: MutationTarget, _font: Font): Promise<void> {
+    throw new Error('applyMutation: not yet implemented');
   }
 
   async deleteProject(projectId: string): Promise<void> {
