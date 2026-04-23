@@ -1,5 +1,6 @@
 # Brainstorming companion artifacts
 .superpowers/
+.claude/worktrees/
 
 # Bun / Node
 node_modules/
