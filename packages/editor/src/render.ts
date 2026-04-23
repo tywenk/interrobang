@@ -1,4 +1,5 @@
 import type { Contour, Glyph, Layer } from '@interrobang/core';
+import { match } from 'ts-pattern';
 import type { Viewport } from './viewport.js';
 
 export interface RenderTheme {
@@ -45,16 +46,23 @@ function drawContourPath(
   while (i < contour.points.length) {
     const p = contour.points[i]!;
     const screen = vp.fontToScreen(p.x, p.y);
-    if (p.type === 'line') {
-      ctx.lineTo(screen.x, screen.y);
-    } else if (p.type === 'qcurve') {
-      const c = vp.fontToScreen(contour.points[i - 1]!.x, contour.points[i - 1]!.y);
-      ctx.quadraticCurveTo(c.x, c.y, screen.x, screen.y);
-    } else if (p.type === 'curve') {
-      const c1 = vp.fontToScreen(contour.points[i - 2]!.x, contour.points[i - 2]!.y);
-      const c2 = vp.fontToScreen(contour.points[i - 1]!.x, contour.points[i - 1]!.y);
-      ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, screen.x, screen.y);
-    }
+    match(p.type)
+      .with('line', () => {
+        ctx.lineTo(screen.x, screen.y);
+      })
+      .with('qcurve', () => {
+        const c = vp.fontToScreen(contour.points[i - 1]!.x, contour.points[i - 1]!.y);
+        ctx.quadraticCurveTo(c.x, c.y, screen.x, screen.y);
+      })
+      .with('curve', () => {
+        const c1 = vp.fontToScreen(contour.points[i - 2]!.x, contour.points[i - 2]!.y);
+        const c2 = vp.fontToScreen(contour.points[i - 1]!.x, contour.points[i - 1]!.y);
+        ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, screen.x, screen.y);
+      })
+      .with('offcurve', () => {
+        // offcurves contribute via the curve/qcurve segment that consumes them
+      })
+      .exhaustive();
     i += 1;
   }
   if (contour.closed) ctx.closePath();

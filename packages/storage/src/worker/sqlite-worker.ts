@@ -3,6 +3,7 @@ import SQLiteESMFactory from 'wa-sqlite/dist/wa-sqlite-async.mjs';
 import * as SQLite from 'wa-sqlite';
 import { AccessHandlePoolVFS } from 'wa-sqlite/src/examples/AccessHandlePoolVFS.js';
 import { IDBBatchAtomicVFS } from 'wa-sqlite/src/examples/IDBBatchAtomicVFS.js';
+import { match, P } from 'ts-pattern';
 import type { Request, Response, Row, SqlValue } from './protocol.js';
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
@@ -152,20 +153,18 @@ async function prepare(sql: string): Promise<number> {
 
 function bindParams(stmt: number, params: SqlValue[]): void {
   for (let i = 0; i < params.length; i++) {
-    const p = params[i] ?? null;
+    const p: SqlValue = params[i] ?? null;
     const idx = i + 1;
-    if (p === null) {
-      api.bind_null(stmt, idx);
-    } else if (typeof p === 'string') {
-      api.bind_text(stmt, idx, p);
-    } else if (typeof p === 'number') {
-      // bind_int is 32-bit and silently fails on values like Date.now().
-      // Use bind_int64 for integers (takes BigInt) and bind_double otherwise.
-      if (Number.isInteger(p)) api.bind_int64(stmt, idx, BigInt(p));
-      else api.bind_double(stmt, idx, p);
-    } else {
-      api.bind_blob(stmt, idx, p);
-    }
+    match(p)
+      .with(P.nullish, () => api.bind_null(stmt, idx))
+      .with(P.string, (s) => api.bind_text(stmt, idx, s))
+      .with(P.number, (n) => {
+        // bind_int is 32-bit and silently fails on values like Date.now().
+        // bind_int64 takes BigInt for integers; bind_double for everything else.
+        if (Number.isInteger(n)) api.bind_int64(stmt, idx, BigInt(n));
+        else api.bind_double(stmt, idx, n);
+      })
+      .otherwise((b) => api.bind_blob(stmt, idx, b));
   }
 }
 
@@ -175,13 +174,15 @@ function readRow(stmt: number): Row {
   for (let i = 0; i < colCount; i++) {
     const name: string = api.column_name(stmt, i);
     const type: number = api.column_type(stmt, i);
-    if (type === SQLite.SQLITE_INTEGER) {
-      const v = api.column_int64(stmt, i);
-      out[name] = typeof v === 'bigint' ? Number(v) : (v as number);
-    } else if (type === SQLite.SQLITE_FLOAT) out[name] = api.column_double(stmt, i);
-    else if (type === SQLite.SQLITE_TEXT) out[name] = api.column_text(stmt, i);
-    else if (type === SQLite.SQLITE_BLOB) out[name] = api.column_blob(stmt, i);
-    else out[name] = null;
+    out[name] = match(type)
+      .with(SQLite.SQLITE_INTEGER, (): SqlValue => {
+        const v = api.column_int64(stmt, i);
+        return typeof v === 'bigint' ? Number(v) : (v as number);
+      })
+      .with(SQLite.SQLITE_FLOAT, (): SqlValue => api.column_double(stmt, i))
+      .with(SQLite.SQLITE_TEXT, (): SqlValue => api.column_text(stmt, i))
+      .with(SQLite.SQLITE_BLOB, (): SqlValue => api.column_blob(stmt, i))
+      .otherwise((): SqlValue => null);
   }
   return out;
 }
@@ -189,24 +190,28 @@ function readRow(stmt: number): Row {
 ctx.addEventListener('message', async (e: MessageEvent<Request>) => {
   const req = e.data;
   try {
-    if (req.kind === 'open') {
-      await open(req.dbName);
-      const res: Response = { id: req.id, kind: 'ok' };
-      ctx.postMessage(res);
-    } else if (req.kind === 'exec') {
-      await exec(req.sql);
-      const res: Response = { id: req.id, kind: 'ok' };
-      ctx.postMessage(res);
-    } else if (req.kind === 'query' || req.kind === 'mutate') {
-      const out = await run(req.sql, req.params);
-      const res: Response = {
-        id: req.id,
-        kind: 'ok',
-        rows: out.rows,
-        changes: out.changes,
-      };
-      ctx.postMessage(res);
-    }
+    await match(req)
+      .with({ kind: 'open' }, async (r) => {
+        await open(r.dbName);
+        const res: Response = { id: r.id, kind: 'ok' };
+        ctx.postMessage(res);
+      })
+      .with({ kind: 'exec' }, async (r) => {
+        await exec(r.sql);
+        const res: Response = { id: r.id, kind: 'ok' };
+        ctx.postMessage(res);
+      })
+      .with({ kind: 'query' }, { kind: 'mutate' }, async (r) => {
+        const out = await run(r.sql, r.params);
+        const res: Response = {
+          id: r.id,
+          kind: 'ok',
+          rows: out.rows,
+          changes: out.changes,
+        };
+        ctx.postMessage(res);
+      })
+      .exhaustive();
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     const res: Response = { id: req.id, kind: 'err', message };
