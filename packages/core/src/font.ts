@@ -15,6 +15,13 @@ export interface FontMeta {
   readonly descender: number;
   readonly capHeight: number;
   readonly xHeight: number;
+  /**
+   * Additional script-specific metrics (e.g. `ideographicTop`,
+   * `hangingBaseline`, `sTypoLineGap`). Opaque to core: storage serializes
+   * via JSON; font-io passes them through on round-trip. Optional so existing
+   * callers stay unchanged.
+   */
+  readonly extraMetrics?: Readonly<Record<string, number>>;
 }
 
 export interface KerningPair {

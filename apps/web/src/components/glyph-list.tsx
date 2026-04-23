@@ -60,21 +60,21 @@ export function GlyphList({ projectId, ...props }: Props) {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <Button variant="outline" size="sm" onClick={() => requestNewGlyph(projectId)}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const input = window.prompt('Character for the new glyph:');
+            if (input === null) return;
+            const char = input.trim();
+            if (!char) return;
+            useProjectStore.getState().addGlyph(projectId, char);
+          }}
+        >
           + Add glyph
         </Button>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  );
-}
-
-function requestNewGlyph(projectId: string): void {
-  const input = window.prompt('Character for the new glyph:');
-  if (input === null) return;
-  const char = input.trim();
-  if (!char) return;
-  document.dispatchEvent(
-    new CustomEvent('interrobang:add-glyph', { detail: { projectId, char } }),
   );
 }

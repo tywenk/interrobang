@@ -3,7 +3,11 @@ import type { Contour, Point } from '../contour.js';
 import { convertPointType, insertPoint, movePoints, removePoint } from './contour-ops.js';
 
 const p = (id: string, x: number, y: number, type: Point['type'] = 'line'): Point => ({
-  id, x, y, type, smooth: false,
+  id,
+  x,
+  y,
+  type,
+  smooth: false,
 });
 
 const square: Contour = {

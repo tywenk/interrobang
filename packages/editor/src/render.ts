@@ -1,4 +1,4 @@
-import type { Contour, Layer } from '@interrobang/core';
+import type { Contour, Glyph, Layer } from '@interrobang/core';
 import type { Viewport } from './viewport.js';
 
 export interface RenderTheme {
@@ -61,6 +61,30 @@ function drawContourPath(
   ctx.lineWidth = 1.5;
   ctx.strokeStyle = theme.outline;
   ctx.stroke();
+}
+
+/**
+ * Produce a shallow-cloned glyph with `pointIds` translated by (dx, dy). Used
+ * by the editor canvas to render a live drag preview without mutating the
+ * controlled glyph prop.
+ */
+export function previewMove(
+  glyph: Glyph,
+  pointIds: readonly string[],
+  dx: number,
+  dy: number,
+): Glyph {
+  const ids = new Set(pointIds);
+  return {
+    ...glyph,
+    layers: glyph.layers.map((layer) => ({
+      ...layer,
+      contours: layer.contours.map((c) => ({
+        ...c,
+        points: c.points.map((p) => (ids.has(p.id) ? { ...p, x: p.x + dx, y: p.y + dy } : p)),
+      })),
+    })),
+  };
 }
 
 function drawContourPoints(

@@ -1,5 +1,14 @@
 import { create } from 'zustand';
-import { UndoRedoStack, type Command, type Font } from '@interrobang/core';
+import {
+  addGlyphCommand,
+  createGlyph,
+  unionAffects,
+  UndoRedoStack,
+  type Command,
+  type Font,
+  type MutationTarget,
+} from '@interrobang/core';
+import { useEditorStore } from './editor-store';
 
 export interface OpenProject {
   id: string;
@@ -13,6 +22,13 @@ interface ProjectState {
   openProjects: { [id: string]: OpenProject };
   openOrder: string[];
   activeId: string | null;
+  /**
+   * MutationTargets accumulated since the last successful save, per project.
+   * Deduped via `unionAffects`. Read by `useAutoSave` → `SaveLoop.scheduleMutations`.
+   */
+  // TODO(components): pendingMutations will also accumulate component targets
+  // once component-edit commands land.
+  pendingMutations: { [id: string]: readonly MutationTarget[] };
 
   addOpenProject: (p: Omit<OpenProject, 'undoStack' | 'dirty'>) => void;
   closeProject: (id: string) => void;
@@ -21,12 +37,14 @@ interface ProjectState {
   undo: (id: string) => void;
   redo: (id: string) => void;
   markClean: (id: string) => void;
+  addGlyph: (projectId: string, char: string) => void;
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
   openProjects: {},
   openOrder: [],
   activeId: null,
+  pendingMutations: {},
 
   addOpenProject(p) {
     set((s) => {
@@ -46,9 +64,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set((s) => {
       const rest = { ...s.openProjects };
       delete rest[id];
+      const restPending = { ...s.pendingMutations };
+      delete restPending[id];
       const order = s.openOrder.filter((x) => x !== id);
       const activeId = s.activeId === id ? (order[order.length - 1] ?? null) : s.activeId;
-      return { openProjects: rest, openOrder: order, activeId };
+      return {
+        openProjects: rest,
+        openOrder: order,
+        activeId,
+        pendingMutations: restPending,
+      };
     });
   },
 
@@ -60,36 +85,91 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const proj = get().openProjects[id];
     if (!proj) return;
     const nextFont = proj.undoStack.apply(proj.font, cmd);
-    set((s) => ({
-      openProjects: { ...s.openProjects, [id]: { ...proj, font: nextFont, dirty: true } },
-    }));
+    set((s) => {
+      const prevPending = s.pendingMutations[id] ?? [];
+      return {
+        openProjects: { ...s.openProjects, [id]: { ...proj, font: nextFont, dirty: true } },
+        pendingMutations: {
+          ...s.pendingMutations,
+          [id]: unionAffects(prevPending, cmd.affects),
+        },
+      };
+    });
   },
 
   undo(id) {
     const proj = get().openProjects[id];
     if (!proj) return;
-    const next = proj.undoStack.undo(proj.font);
-    if (!next) return;
-    set((s) => ({
-      openProjects: { ...s.openProjects, [id]: { ...proj, font: next, dirty: true } },
-    }));
+    const result = proj.undoStack.undo(proj.font);
+    if (!result) return;
+    set((s) => {
+      const prevPending = s.pendingMutations[id] ?? [];
+      return {
+        openProjects: { ...s.openProjects, [id]: { ...proj, font: result.state, dirty: true } },
+        pendingMutations: {
+          ...s.pendingMutations,
+          [id]: unionAffects(prevPending, result.command.affects),
+        },
+      };
+    });
   },
 
   redo(id) {
     const proj = get().openProjects[id];
     if (!proj) return;
-    const next = proj.undoStack.redo(proj.font);
-    if (!next) return;
-    set((s) => ({
-      openProjects: { ...s.openProjects, [id]: { ...proj, font: next, dirty: true } },
-    }));
+    const result = proj.undoStack.redo(proj.font);
+    if (!result) return;
+    set((s) => {
+      const prevPending = s.pendingMutations[id] ?? [];
+      return {
+        openProjects: { ...s.openProjects, [id]: { ...proj, font: result.state, dirty: true } },
+        pendingMutations: {
+          ...s.pendingMutations,
+          [id]: unionAffects(prevPending, result.command.affects),
+        },
+      };
+    });
   },
 
   markClean(id) {
     const proj = get().openProjects[id];
     if (!proj) return;
-    set((s) => ({
-      openProjects: { ...s.openProjects, [id]: { ...proj, dirty: false } },
-    }));
+    set((s) => {
+      const restPending = { ...s.pendingMutations };
+      delete restPending[id];
+      return {
+        openProjects: { ...s.openProjects, [id]: { ...proj, dirty: false } },
+        pendingMutations: restPending,
+      };
+    });
+  },
+
+  // TODO(components): add a parallel addComponent(projectId, name, layer) that
+  // uses addComponentCommand + the components table (migration 0002).
+  addGlyph(projectId, char) {
+    const proj = get().openProjects[projectId];
+    if (!proj) return;
+    const masterId = proj.font.masters[0]?.id;
+    if (!masterId) return;
+
+    const rawChar = (char ?? 'A').trim();
+    const safeChar = rawChar.length > 0 ? [...rawChar][0]! : 'A';
+    const codepoint = safeChar.codePointAt(0) ?? null;
+
+    const existing = Object.values(proj.font.glyphs);
+    const byCodepoint = codepoint
+      ? existing.find((g) => g.unicodeCodepoint === codepoint)
+      : undefined;
+    if (byCodepoint) {
+      useEditorStore.getState().setActiveGlyph(projectId, byCodepoint.id);
+      return;
+    }
+
+    let name = safeChar;
+    for (let i = 1; existing.some((g) => g.name === name); i++) name = `${safeChar}.${i}`;
+
+    const glyph = createGlyph({ name, codepoint, masterId, starter: 'triangle' });
+    get().applyCommand(projectId, addGlyphCommand({ glyph }));
+    useEditorStore.getState().setActiveGlyph(projectId, glyph.id);
   },
 }));

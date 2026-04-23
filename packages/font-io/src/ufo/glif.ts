@@ -57,7 +57,8 @@ export function parseGlif(xml: string): GlifGlyph {
   const advanceWidth = g.advance?.['@_width'] !== undefined ? Number(g.advance['@_width']) : 500;
   const unicode = g.unicode?.['@_hex'] !== undefined ? parseInt(g.unicode['@_hex'], 16) : null;
   const rawContours = g.outline?.contour;
-  const contoursArr = rawContours === undefined ? [] : Array.isArray(rawContours) ? rawContours : [rawContours];
+  const contoursArr =
+    rawContours === undefined ? [] : Array.isArray(rawContours) ? rawContours : [rawContours];
   const contours: Contour[] = contoursArr.map((c) => {
     const rawPoints = c.point;
     const pts = rawPoints === undefined ? [] : Array.isArray(rawPoints) ? rawPoints : [rawPoints];

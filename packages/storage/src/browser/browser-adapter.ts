@@ -1,20 +1,96 @@
-import { newId, type Font, type Glyph, type Layer } from '@interrobang/core';
+import { newId, type Font, type Glyph, type Layer, type MutationTarget } from '@interrobang/core';
 import type { SqliteClient } from '../worker/client.js';
 import type { ProjectSummary, StorageAdapter } from '../adapter.js';
-import { deserializeLayer, serializeGlyph, serializeLayer } from './serialize.js';
+import { applyMutation } from './apply-mutation.js';
+import {
+  deserializeExtraMetrics,
+  deserializeLayer,
+  serializeExtraMetrics,
+  serializeGlyph,
+  serializeLayer,
+} from './serialize.js';
+
+/**
+ * SQL row shapes, matching the column names SQLite returns (snake_case).
+ * We keep Drizzle's table definitions in `@interrobang/schema` as the source
+ * of truth for DDL, but consume rows through hand SQL: Drizzle's sqlite-proxy
+ * works against node:sqlite in tests but throws against our wa-sqlite worker
+ * at runtime, and typed reads aren't worth a second query path.
+ */
+interface ProjectRow {
+  id: string;
+  name: string;
+  updated_at: number;
+  revision: number;
+}
+interface FontMetaRow {
+  project_id: string;
+  family_name: string;
+  style_name: string;
+  units_per_em: number;
+  ascender: number;
+  descender: number;
+  cap_height: number;
+  x_height: number;
+  extra_metrics_json: string | null;
+}
+interface MasterRow {
+  id: string;
+  project_id: string;
+  name: string;
+  weight: number;
+  width: number;
+}
+interface GlyphRow {
+  id: string;
+  project_id: string;
+  name: string;
+  advance_width: number;
+  unicode_codepoint: number | null;
+  revision: number;
+}
+interface LayerRow {
+  id: string;
+  glyph_id: string;
+  master_id: string;
+  contours_json: string;
+  components_json: string;
+  anchors_json: string;
+}
+interface KerningRow {
+  project_id: string;
+  left_glyph: string;
+  right_glyph: string;
+  value: number;
+  revision: number;
+}
+interface ProjectRevisionRow {
+  id: string;
+  revision: number;
+}
+
+async function queryRows<T>(
+  client: SqliteClient,
+  sql: string,
+  params: unknown[] = [],
+): Promise<T[]> {
+  const rows = await client.query(sql, params as never);
+  return rows as unknown as T[];
+}
 
 export class BrowserStorageAdapter implements StorageAdapter {
   constructor(private db: SqliteClient) {}
 
   async listProjects(): Promise<ProjectSummary[]> {
-    const rows = await this.db.query(
+    const rows = await queryRows<ProjectRow>(
+      this.db,
       'SELECT id, name, updated_at, revision FROM projects ORDER BY updated_at DESC',
     );
     return rows.map((r) => ({
-      id: r['id'] as string,
-      name: r['name'] as string,
-      updatedAt: r['updated_at'] as number,
-      revision: r['revision'] as number,
+      id: r.id,
+      name: r.name,
+      updatedAt: r.updated_at,
+      revision: r.revision,
     }));
   }
 
@@ -31,109 +107,124 @@ export class BrowserStorageAdapter implements StorageAdapter {
       [masterId, id, 'Regular'],
     );
     await this.db.mutate(
-      `INSERT INTO font_meta(project_id, family_name, style_name, units_per_em, ascender, descender, cap_height, x_height)
-       VALUES (?, ?, 'Regular', 1000, 800, -200, 700, 500)`,
+      `INSERT INTO font_meta(project_id, family_name, style_name, units_per_em, ascender, descender, cap_height, x_height, extra_metrics_json)
+       VALUES (?, ?, 'Regular', 1000, 800, -200, 700, 500, NULL)`,
       [id, name],
     );
     return id;
   }
 
   async loadFont(projectId: string): Promise<Font> {
-    const metaRows = await this.db.query(
+    const [meta] = await queryRows<FontMetaRow>(
+      this.db,
       'SELECT * FROM font_meta WHERE project_id = ?',
       [projectId],
     );
-    const meta = metaRows[0];
     if (!meta) throw new Error(`No project: ${projectId}`);
 
-    const masterRows = await this.db.query('SELECT * FROM masters WHERE project_id = ?', [
-      projectId,
-    ]);
-    const glyphRows = await this.db.query('SELECT * FROM glyphs WHERE project_id = ?', [
-      projectId,
-    ]);
-    const layerRows = await this.db.query(
+    const [projRow] = await queryRows<ProjectRevisionRow>(
+      this.db,
+      'SELECT id, revision FROM projects WHERE id = ?',
+      [projectId],
+    );
+    if (!projRow) throw new Error(`No project row: ${projectId}`);
+
+    const masterRows = await queryRows<MasterRow>(
+      this.db,
+      'SELECT * FROM masters WHERE project_id = ?',
+      [projectId],
+    );
+
+    const glyphRows = await queryRows<GlyphRow>(
+      this.db,
+      'SELECT * FROM glyphs WHERE project_id = ?',
+      [projectId],
+    );
+
+    const layerRows = await queryRows<LayerRow>(
+      this.db,
       `SELECT layers.* FROM layers
        INNER JOIN glyphs ON glyphs.id = layers.glyph_id
        WHERE glyphs.project_id = ?`,
       [projectId],
     );
-    const kerningRows = await this.db.query(
+
+    const kerningRows = await queryRows<KerningRow>(
+      this.db,
       'SELECT * FROM kerning_pairs WHERE project_id = ?',
       [projectId],
     );
 
     const layersByGlyph = new Map<string, Layer[]>();
     for (const r of layerRows) {
-      const glyphId = r['glyph_id'] as string;
-      const arr = layersByGlyph.get(glyphId) ?? [];
+      const arr = layersByGlyph.get(r.glyph_id) ?? [];
       arr.push(
         deserializeLayer({
-          id: r['id'] as string,
-          master_id: r['master_id'] as string,
-          contours_json: r['contours_json'] as string,
-          components_json: r['components_json'] as string,
-          anchors_json: r['anchors_json'] as string,
+          id: r.id,
+          master_id: r.master_id,
+          contours_json: r.contours_json,
+          components_json: r.components_json,
+          anchors_json: r.anchors_json,
         }),
       );
-      layersByGlyph.set(glyphId, arr);
+      layersByGlyph.set(r.glyph_id, arr);
     }
-
-    const projRows = await this.db.query('SELECT id, revision FROM projects WHERE id = ?', [
-      projectId,
-    ]);
-    const projRow = projRows[0];
-    if (!projRow) throw new Error(`No project row: ${projectId}`);
 
     const glyphs: { [id: string]: Glyph } = {};
     const order: string[] = [];
     for (const g of glyphRows) {
-      const id = g['id'] as string;
-      glyphs[id] = {
-        id,
-        name: g['name'] as string,
-        advanceWidth: g['advance_width'] as number,
-        unicodeCodepoint: (g['unicode_codepoint'] as number | null) ?? null,
-        layers: layersByGlyph.get(id) ?? [],
-        revision: g['revision'] as number,
+      glyphs[g.id] = {
+        id: g.id,
+        name: g.name,
+        advanceWidth: g.advance_width,
+        unicodeCodepoint: g.unicode_codepoint ?? null,
+        layers: layersByGlyph.get(g.id) ?? [],
+        revision: g.revision,
       };
-      order.push(id);
+      order.push(g.id);
     }
 
+    const extra = deserializeExtraMetrics(meta.extra_metrics_json);
     return {
-      id: projRow['id'] as string,
+      id: projRow.id,
       meta: {
-        familyName: meta['family_name'] as string,
-        styleName: meta['style_name'] as string,
-        unitsPerEm: meta['units_per_em'] as number,
-        ascender: meta['ascender'] as number,
-        descender: meta['descender'] as number,
-        capHeight: meta['cap_height'] as number,
-        xHeight: meta['x_height'] as number,
+        familyName: meta.family_name,
+        styleName: meta.style_name,
+        unitsPerEm: meta.units_per_em,
+        ascender: meta.ascender,
+        descender: meta.descender,
+        capHeight: meta.cap_height,
+        xHeight: meta.x_height,
+        ...(extra ? { extraMetrics: extra } : {}),
       },
       masters: masterRows.map((m) => ({
-        id: m['id'] as string,
-        name: m['name'] as string,
-        weight: m['weight'] as number,
-        width: m['width'] as number,
+        id: m.id,
+        name: m.name,
+        weight: m.weight,
+        width: m.width,
       })),
       glyphs,
       glyphOrder: order,
       kerning: kerningRows.map((k) => ({
-        leftGlyph: k['left_glyph'] as string,
-        rightGlyph: k['right_glyph'] as string,
-        value: k['value'] as number,
+        leftGlyph: k.left_glyph,
+        rightGlyph: k.right_glyph,
+        value: k.value,
       })),
-      revision: projRow['revision'] as number,
+      revision: projRow.revision,
     };
   }
 
+  /**
+   * Full-font upsert. Used by import flows (`ImportButton`) to land a freshly
+   * parsed OTF/UFO into SQLite in one shot. All interactive edits go through
+   * `applyMutation` instead.
+   */
   async saveFont(projectId: string, font: Font): Promise<void> {
     await this.db.exec('BEGIN');
     try {
       await this.db.mutate(
         `UPDATE font_meta SET family_name=?, style_name=?, units_per_em=?, ascender=?, descender=?,
-                              cap_height=?, x_height=? WHERE project_id=?`,
+                              cap_height=?, x_height=?, extra_metrics_json=? WHERE project_id=?`,
         [
           font.meta.familyName,
           font.meta.styleName,
@@ -142,6 +233,7 @@ export class BrowserStorageAdapter implements StorageAdapter {
           font.meta.descender,
           font.meta.capHeight,
           font.meta.xHeight,
+          serializeExtraMetrics(font.meta.extraMetrics),
           projectId,
         ],
       );
@@ -193,6 +285,10 @@ export class BrowserStorageAdapter implements StorageAdapter {
       await this.db.exec('ROLLBACK');
       throw err;
     }
+  }
+
+  async applyMutation(projectId: string, target: MutationTarget, font: Font): Promise<void> {
+    return applyMutation(this.db, projectId, target, font);
   }
 
   async deleteProject(projectId: string): Promise<void> {

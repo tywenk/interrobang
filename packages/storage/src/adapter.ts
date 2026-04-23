@@ -1,4 +1,4 @@
-import type { Font } from '@interrobang/core';
+import type { Font, MutationTarget } from '@interrobang/core';
 
 export interface ProjectSummary {
   id: string;
@@ -12,6 +12,13 @@ export interface StorageAdapter {
   createProject(name: string): Promise<string>;
   loadFont(projectId: string): Promise<Font>;
   saveFont(projectId: string, font: Font): Promise<void>;
+  /**
+   * Apply a minimal SQL diff for the given target, reading from `font` for
+   * current values. `applyMutation` is the preferred auto-save path;
+   * `saveFont` remains for whole-font ingestion (import) and as a flag-off
+   * fallback.
+   */
+  applyMutation(projectId: string, target: MutationTarget, font: Font): Promise<void>;
   deleteProject(projectId: string): Promise<void>;
   readBlob(projectId: string, key: string): Promise<Uint8Array | null>;
   writeBlob(projectId: string, key: string, bytes: Uint8Array): Promise<void>;

@@ -35,22 +35,15 @@
           "name": "features_project_id_projects_id_fk",
           "tableFrom": "features",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "features_project_id_tag_pk": {
-          "columns": [
-            "project_id",
-            "tag"
-          ],
+          "columns": ["project_id", "tag"],
           "name": "features_project_id_tag_pk"
         }
       },
@@ -129,12 +122,8 @@
           "name": "font_meta_project_id_projects_id_fk",
           "tableFrom": "font_meta",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -194,10 +183,7 @@
       "indexes": {
         "idx_glyphs_project_name": {
           "name": "idx_glyphs_project_name",
-          "columns": [
-            "project_id",
-            "name"
-          ],
+          "columns": ["project_id", "name"],
           "isUnique": false
         }
       },
@@ -206,12 +192,8 @@
           "name": "glyphs_project_id_projects_id_fk",
           "tableFrom": "glyphs",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -266,23 +248,15 @@
           "name": "kerning_pairs_project_id_projects_id_fk",
           "tableFrom": "kerning_pairs",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "kerning_pairs_project_id_left_glyph_right_glyph_pk": {
-          "columns": [
-            "project_id",
-            "left_glyph",
-            "right_glyph"
-          ],
+          "columns": ["project_id", "left_glyph", "right_glyph"],
           "name": "kerning_pairs_project_id_left_glyph_right_glyph_pk"
         }
       },
@@ -344,12 +318,8 @@
           "name": "layers_glyph_id_glyphs_id_fk",
           "tableFrom": "layers",
           "tableTo": "glyphs",
-          "columnsFrom": [
-            "glyph_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["glyph_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -357,12 +327,8 @@
           "name": "layers_master_id_masters_id_fk",
           "tableFrom": "layers",
           "tableTo": "masters",
-          "columnsFrom": [
-            "master_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["master_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -418,12 +384,8 @@
           "name": "masters_project_id_projects_id_fk",
           "tableFrom": "masters",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -463,22 +425,15 @@
           "name": "project_blobs_project_id_projects_id_fk",
           "tableFrom": "project_blobs",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "project_blobs_project_id_key_pk": {
-          "columns": [
-            "project_id",
-            "key"
-          ],
+          "columns": ["project_id", "key"],
           "name": "project_blobs_project_id_key_pk"
         }
       },
@@ -625,9 +580,7 @@
       "indexes": {
         "users_email_unique": {
           "name": "users_email_unique",
-          "columns": [
-            "email"
-          ],
+          "columns": ["email"],
           "isUnique": true
         }
       },

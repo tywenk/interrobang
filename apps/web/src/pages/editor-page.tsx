@@ -1,0 +1,59 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { projectRoute } from '../router';
+import { useAppServices } from '../app-context';
+import { useProjectStore } from '../stores/project-store';
+import { EditorShell } from '../components/editor-shell';
+import { EditorMenuBar } from '../components/editor-menu-bar';
+import { TabBar } from '../components/tab-bar';
+import { GlyphList } from '../components/glyph-list';
+import { CoordinatesPanel } from '../components/coordinates-panel';
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { useEditorKeyboardShortcuts } from '../hooks/use-keyboard-shortcuts';
+import { useAutoSave } from '../hooks/use-auto-save';
+import type { EditorCanvasHandle } from '@interrobang/editor';
+
+export function EditorPage() {
+  const { projectId } = projectRoute.useParams();
+  const { storage } = useAppServices();
+  const addOpenProject = useProjectStore((s) => s.addOpenProject);
+  const open = useProjectStore((s) => s.openProjects[projectId]);
+  const [error, setError] = useState<string | null>(null);
+
+  // Callback ref keeps a synchronous ref (used by the menubar + shortcuts so
+  // they can call fitToView without a re-render) alongside React state (so
+  // CoordinatesPanel re-renders once the handle is available to subscribe to).
+  const canvasRef = useRef<EditorCanvasHandle | null>(null);
+  const [canvasHandle, setCanvasHandle] = useState<EditorCanvasHandle | null>(null);
+  const setCanvas = useCallback((handle: EditorCanvasHandle | null) => {
+    canvasRef.current = handle;
+    setCanvasHandle(handle);
+  }, []);
+
+  useEditorKeyboardShortcuts(projectId, { canvasRef });
+  useAutoSave(projectId);
+
+  useEffect(() => {
+    if (open) return;
+    storage
+      .then((s) => s.loadFont(projectId))
+      .then((font) => addOpenProject({ id: projectId, name: font.meta.familyName, font }))
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
+  }, [projectId, open, addOpenProject, storage]);
+
+  if (error) return <div className="p-6 text-destructive">{error}</div>;
+  return (
+    <SidebarProvider className="h-screen">
+      <GlyphList projectId={projectId} />
+      <SidebarInset className="flex min-w-0 flex-col">
+        <EditorMenuBar projectId={projectId} canvasRef={canvasRef} />
+        <TabBar activeId={projectId} />
+        <div className="flex min-h-0 flex-1">
+          <div className="relative min-h-0 min-w-0 flex-1">
+            <EditorShell projectId={projectId} canvasHandleRef={setCanvas} />
+          </div>
+          <CoordinatesPanel canvas={canvasHandle} />
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
+  );
+}

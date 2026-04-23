@@ -1,10 +1,17 @@
 export type { Point, PointType, Contour, Anchor, ComponentRef } from './contour.js';
 export type { Glyph, Layer } from './glyph.js';
 export type { Font, FontMeta, Master, KerningPair } from './font.js';
-export { newId } from './id.js';
-export type { Command } from './commands/command.js';
+export { nanoid as newId } from 'nanoid';
+export type { Command, ToggleResult } from './commands/command.js';
 export { UndoRedoStack } from './commands/command.js';
+export type { MutationTarget } from './commands/mutation-target.js';
 export {
-  movePointsCommand, insertPointCommand, removePointCommand, convertPointTypeCommand,
+  movePointsCommand,
+  insertPointCommand,
+  removePointCommand,
+  convertPointTypeCommand,
+  addGlyphCommand,
+  unionAffects,
 } from './commands/font-commands.js';
-export { emptyFont, updateGlyph, replaceLayer } from './ops/glyph-ops.js';
+export { emptyFont, updateGlyph, replaceLayer, createGlyph } from './ops/glyph-ops.js';
+export type { CreateGlyphInput } from './ops/glyph-ops.js';

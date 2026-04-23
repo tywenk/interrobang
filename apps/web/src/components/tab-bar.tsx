@@ -1,6 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useProjectStore } from '../stores/project-store';
-import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 
@@ -51,11 +50,6 @@ export function TabBar({ activeId }: { activeId: string }) {
           </div>
         );
       })}
-      <Link to="/" className="ml-auto">
-        <Button variant="ghost" size="sm">
-          + New / Open
-        </Button>
-      </Link>
     </div>
   );
 }

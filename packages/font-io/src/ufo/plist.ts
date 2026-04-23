@@ -169,7 +169,8 @@ function encodeXml(value: PlistValue, depth: number): string {
     if (Number.isInteger(value)) return `${ind}<integer>${value}</integer>`;
     return `${ind}<real>${value}</real>`;
   }
-  if (value instanceof Date) return `${ind}<date>${value.toISOString().replace(/\.\d{3}Z$/, 'Z')}</date>`;
+  if (value instanceof Date)
+    return `${ind}<date>${value.toISOString().replace(/\.\d{3}Z$/, 'Z')}</date>`;
   if (value instanceof Uint8Array) return `${ind}<data>${base64Encode(value)}</data>`;
   if (Array.isArray(value)) {
     if (value.length === 0) return `${ind}<array/>`;

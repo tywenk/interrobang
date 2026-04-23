@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import type { Ref } from 'react';
 import type { Glyph } from '@interrobang/core';
 import { movePointsCommand, insertPointCommand, newId } from '@interrobang/core';
@@ -6,52 +6,40 @@ import { EditorCanvas, type EditorCanvasHandle } from '@interrobang/editor';
 import { useProjectStore } from '../stores/project-store';
 import { useEditorStore } from '../stores/editor-store';
 import { Button } from '@/components/ui/button';
-import { ExportButton } from './ExportButton';
 
 interface Props {
   projectId: string;
   canvasHandleRef?: Ref<EditorCanvasHandle>;
 }
 
+const EMPTY_SELECTION: ReadonlySet<string> = new Set();
+
 export function EditorShell({ projectId, canvasHandleRef }: Props) {
   const proj = useProjectStore((s) => s.openProjects[projectId]);
   const applyCommand = useProjectStore((s) => s.applyCommand);
-  const undo = useProjectStore((s) => s.undo);
-  const redo = useProjectStore((s) => s.redo);
   const tool = useEditorStore((s) => s.tool);
   const setSelection = useEditorStore((s) => s.setSelection);
   const activeGlyphId = useEditorStore((s) => s.activeGlyphByProject[projectId]);
-
-  const internalRef = useRef<EditorCanvasHandle | null>(null);
-  const setRefs = useCallback(
-    (handle: EditorCanvasHandle | null) => {
-      internalRef.current = handle;
-      if (typeof canvasHandleRef === 'function') canvasHandleRef(handle);
-      else if (canvasHandleRef) canvasHandleRef.current = handle;
-    },
-    [canvasHandleRef],
-  );
+  const selectionByGlyph = useEditorStore((s) => s.selectionByGlyph);
 
   const activeGlyph: Glyph | null = useMemo(() => {
     if (!proj) return null;
     const id = activeGlyphId ?? proj.font.glyphOrder[0];
-    return id ? proj.font.glyphs[id] ?? null : null;
+    return id ? (proj.font.glyphs[id] ?? null) : null;
   }, [proj, activeGlyphId]);
 
-  useEffect(() => {
-    if (internalRef.current && activeGlyph) internalRef.current.setGlyph(activeGlyph);
-  }, [activeGlyph]);
-
-  useEffect(() => {
-    internalRef.current?.setTool(tool);
-  }, [tool]);
+  const selection = activeGlyph
+    ? (selectionByGlyph[activeGlyph.id] ?? EMPTY_SELECTION)
+    : EMPTY_SELECTION;
 
   if (!proj) return <div className="p-6 text-muted-foreground">Loading project…</div>;
   if (!activeGlyph)
     return (
       <div className="p-6">
         <p className="text-muted-foreground mb-2">No glyphs in this project yet.</p>
-        <Button onClick={() => requestStarterGlyph(projectId)}>Add a glyph &quot;A&quot;</Button>
+        <Button onClick={() => useProjectStore.getState().addGlyph(projectId, 'A')}>
+          Add a glyph &quot;A&quot;
+        </Button>
       </div>
     );
 
@@ -60,14 +48,14 @@ export function EditorShell({ projectId, canvasHandleRef }: Props) {
   return (
     <div className="absolute inset-0">
       <EditorCanvas
-        ref={setRefs}
-        initialGlyph={currentGlyph}
+        ref={canvasHandleRef}
+        glyph={currentGlyph}
+        selection={selection}
+        tool={tool}
         onCommitMove={(pointIds, dx, dy) => {
           const layer = currentGlyph.layers[0];
           if (!layer) return;
-          const contour = layer.contours.find((c) =>
-            c.points.some((p) => pointIds.includes(p.id)),
-          );
+          const contour = layer.contours.find((c) => c.points.some((p) => pointIds.includes(p.id)));
           if (!contour) return;
           applyCommand(
             projectId,
@@ -99,21 +87,6 @@ export function EditorShell({ projectId, canvasHandleRef }: Props) {
           );
         }}
       />
-      <div className="absolute bottom-4 left-4 flex gap-2">
-        <Button variant="outline" onClick={() => undo(projectId)}>
-          Undo
-        </Button>
-        <Button variant="outline" onClick={() => redo(projectId)}>
-          Redo
-        </Button>
-        <ExportButton projectId={projectId} />
-      </div>
     </div>
-  );
-}
-
-function requestStarterGlyph(projectId: string): void {
-  document.dispatchEvent(
-    new CustomEvent('interrobang:add-starter', { detail: { projectId } }),
   );
 }

@@ -1,5 +1,12 @@
 import opentype from 'opentype.js';
-import { newId, type Font, type Glyph, type Layer, type Contour, type Point } from '@interrobang/core';
+import {
+  newId,
+  type Font,
+  type Glyph,
+  type Layer,
+  type Contour,
+  type Point,
+} from '@interrobang/core';
 
 /**
  * Parse an OpenType, TrueType, or OTF font into the internal {@link Font} model.
@@ -38,6 +45,28 @@ export function parseOTF(bytes: ArrayBuffer): Font {
     order.push(glyphId);
   }
 
+  // Harvest a few OS/2 / hhea fields into `extraMetrics` so CJK / non-Latin
+  // consumers have round-trippable state for things core doesn't model. Keep
+  // the bag small: we only surface fields that are plain integers.
+  const os2 = ot.tables.os2 as
+    | {
+        sCapHeight?: number;
+        sxHeight?: number;
+        sTypoAscender?: number;
+        sTypoDescender?: number;
+        sTypoLineGap?: number;
+        usWinAscent?: number;
+        usWinDescent?: number;
+      }
+    | undefined;
+  const extraMetrics = pickFiniteNumbers({
+    sTypoAscender: os2?.sTypoAscender,
+    sTypoDescender: os2?.sTypoDescender,
+    sTypoLineGap: os2?.sTypoLineGap,
+    usWinAscent: os2?.usWinAscent,
+    usWinDescent: os2?.usWinDescent,
+  });
+
   return {
     id: newId(),
     meta: {
@@ -46,8 +75,9 @@ export function parseOTF(bytes: ArrayBuffer): Font {
       unitsPerEm: ot.unitsPerEm,
       ascender: ot.ascender,
       descender: ot.descender,
-      capHeight: (ot.tables.os2 as { sCapHeight?: number } | undefined)?.sCapHeight ?? 700,
-      xHeight: (ot.tables.os2 as { sxHeight?: number } | undefined)?.sxHeight ?? 500,
+      capHeight: os2?.sCapHeight ?? 700,
+      xHeight: os2?.sxHeight ?? 500,
+      ...(extraMetrics ? { extraMetrics } : {}),
     },
     masters: [{ id: masterId, name: styleName, weight: 400, width: 100 }],
     glyphs,
@@ -55,6 +85,17 @@ export function parseOTF(bytes: ArrayBuffer): Font {
     kerning: [],
     revision: 0,
   };
+}
+
+/** Keep only finite-number entries; return `undefined` when the result is empty. */
+function pickFiniteNumbers(
+  candidates: Record<string, number | undefined>,
+): Record<string, number> | undefined {
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(candidates)) {
+    if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 /** Convert an `opentype.js` path into a {@link Layer} of typed points. */
@@ -131,6 +172,15 @@ export function writeOTF(font: Font): ArrayBuffer {
     descender: font.meta.descender,
     glyphs: otGlyphs,
   });
+  // Stamp any round-trippable OS/2 extras back onto the generated OS/2 table.
+  // opentype.js builds a default one in the constructor, so mutate it rather
+  // than passing a half-formed `tables.os2`.
+  const os2 = ot.tables.os2 as Record<string, number | undefined> | undefined;
+  if (os2 && font.meta.extraMetrics) {
+    for (const [k, v] of Object.entries(font.meta.extraMetrics)) {
+      os2[k] = v;
+    }
+  }
   return ot.toArrayBuffer();
 }
 
