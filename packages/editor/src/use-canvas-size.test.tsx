@@ -97,11 +97,15 @@ describe('useCanvasSize', () => {
     MockResizeObserver.lastCallback = null;
     (globalThis as unknown as { ResizeObserver: typeof MockResizeObserver }).ResizeObserver =
       MockResizeObserver;
+    // Mirror real rAF ordering: the frame id is returned before the callback
+    // runs, so scheduleDraw's rafRef is cleared inside the callback only after
+    // it was first set to a non-null id. queueMicrotask keeps flushes
+    // observable in tests via `await Promise.resolve()`.
     (
       globalThis as unknown as { requestAnimationFrame: (cb: FrameRequestCallback) => number }
     ).requestAnimationFrame = (cb) => {
-      cb(0);
-      return 0;
+      queueMicrotask(() => cb(0));
+      return 1;
     };
     (globalThis as unknown as { devicePixelRatio: number }).devicePixelRatio = 1;
   });
@@ -120,6 +124,24 @@ describe('useCanvasSize', () => {
     });
 
     expect(result.current.viewport.getCanvasSize()).toEqual({ width: 1200, height: 900 });
+  });
+
+  test('rerendering with a new glyph schedules a redraw', async () => {
+    const rafSpy = vi.spyOn(globalThis, 'requestAnimationFrame');
+    const glyph = makeGlyph('A');
+    const { rerender } = renderHook(({ g }: { g: Glyph }) => useHarness(g, () => {}), {
+      initialProps: { g: glyph },
+    });
+    // Let the initial mount's rAF drain so rafRef clears before we rerender.
+    await act(async () => {
+      await Promise.resolve();
+    });
+    rafSpy.mockClear();
+
+    const nextGlyph = makeGlyph('B');
+    rerender({ g: nextGlyph });
+
+    expect(rafSpy).toHaveBeenCalled();
   });
 
   test('fitToGlyph uses the latest glyph', () => {

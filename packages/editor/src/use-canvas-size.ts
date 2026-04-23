@@ -80,6 +80,13 @@ export function useCanvasSize({
     scheduleDraw();
   }, [viewport, scheduleDraw]);
 
+  // Glyph swaps arrive from outside the canvas (e.g. switching the active
+  // glyph in the sidebar). Without this, the next paint only lands when some
+  // other signal — a resize or a mouse event — happens to fire scheduleDraw.
+  useLayoutEffect(() => {
+    scheduleDraw();
+  }, [glyph, scheduleDraw]);
+
   const applySize = useCallback(
     (cssWidth: number, cssHeight: number) => {
       const canvas = canvasRef.current;

@@ -6,7 +6,6 @@ import { EditorCanvas, type EditorCanvasHandle } from '@interrobang/editor';
 import { useProjectStore } from '../stores/project-store';
 import { useEditorStore } from '../stores/editor-store';
 import { Button } from '@/components/ui/button';
-import { ExportButton } from './export-button';
 
 interface Props {
   projectId: string;
@@ -18,8 +17,6 @@ const EMPTY_SELECTION: ReadonlySet<string> = new Set();
 export function EditorShell({ projectId, canvasHandleRef }: Props) {
   const proj = useProjectStore((s) => s.openProjects[projectId]);
   const applyCommand = useProjectStore((s) => s.applyCommand);
-  const undo = useProjectStore((s) => s.undo);
-  const redo = useProjectStore((s) => s.redo);
   const tool = useEditorStore((s) => s.tool);
   const setSelection = useEditorStore((s) => s.setSelection);
   const activeGlyphId = useEditorStore((s) => s.activeGlyphByProject[projectId]);
@@ -90,15 +87,6 @@ export function EditorShell({ projectId, canvasHandleRef }: Props) {
           );
         }}
       />
-      <div className="absolute bottom-4 left-4 flex gap-2">
-        <Button variant="outline" onClick={() => undo(projectId)}>
-          Undo
-        </Button>
-        <Button variant="outline" onClick={() => redo(projectId)}>
-          Redo
-        </Button>
-        <ExportButton projectId={projectId} />
-      </div>
     </div>
   );
 }
