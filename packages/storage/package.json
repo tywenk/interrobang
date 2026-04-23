@@ -21,6 +21,7 @@
   "dependencies": {
     "@interrobang/core": "workspace:*",
     "@interrobang/schema": "workspace:*",
+    "ts-pattern": "5.9.0",
     "wa-sqlite": "1.0.0"
   },
   "devDependencies": {

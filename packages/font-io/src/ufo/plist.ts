@@ -1,4 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
+import { match } from 'ts-pattern';
 
 /**
  * In-memory representation of an Apple Property List value.
@@ -22,6 +23,33 @@ export type PlistValue =
   | Uint8Array
   | PlistValue[]
   | { [k: string]: PlistValue };
+
+type PlistTag =
+  | 'dict'
+  | 'array'
+  | 'string'
+  | 'integer'
+  | 'real'
+  | 'true'
+  | 'false'
+  | 'data'
+  | 'date';
+
+const PLIST_TAGS: ReadonlySet<string> = new Set<PlistTag>([
+  'dict',
+  'array',
+  'string',
+  'integer',
+  'real',
+  'true',
+  'false',
+  'data',
+  'date',
+]);
+
+function isPlistTag(tag: string): tag is PlistTag {
+  return PLIST_TAGS.has(tag);
+}
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -71,19 +99,21 @@ function decode(node: unknown): PlistValue {
   const entries = Object.entries(node as Record<string, unknown>).filter(([k]) => k !== ':@');
   if (entries.length === 0) throw new Error('Empty plist node');
   const [tag, content] = entries[0]!;
-  if (tag === 'dict') return decodeDict(content as unknown[]);
-  if (tag === 'array') {
-    const arr = content as unknown[];
-    return arr.filter((c) => !isTextNode(c)).map((c) => decode(c));
-  }
-  if (tag === 'string') return getText(content);
-  if (tag === 'integer') return parseInt(getText(content), 10);
-  if (tag === 'real') return parseFloat(getText(content));
-  if (tag === 'true') return true;
-  if (tag === 'false') return false;
-  if (tag === 'data') return base64Decode(getText(content));
-  if (tag === 'date') return new Date(getText(content));
-  throw new Error(`Unknown plist tag: ${tag}`);
+  if (!isPlistTag(tag)) throw new Error(`Unknown plist tag: ${tag}`);
+  return match(tag)
+    .with('dict', () => decodeDict(content as unknown[]))
+    .with('array', () => {
+      const arr = content as unknown[];
+      return arr.filter((c) => !isTextNode(c)).map((c) => decode(c));
+    })
+    .with('string', () => getText(content))
+    .with('integer', () => parseInt(getText(content), 10))
+    .with('real', () => parseFloat(getText(content)))
+    .with('true', () => true)
+    .with('false', () => false)
+    .with('data', () => base64Decode(getText(content)))
+    .with('date', () => new Date(getText(content)))
+    .exhaustive();
 }
 
 function getText(content: unknown): string {

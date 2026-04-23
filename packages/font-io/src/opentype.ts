@@ -1,4 +1,5 @@
 import opentype from 'opentype.js';
+import { match } from 'ts-pattern';
 import {
   newId,
   type Font,
@@ -105,25 +106,31 @@ function pathToLayer(path: opentype.Path, masterId: string): Layer {
   let hasMove = false;
 
   for (const cmd of path.commands) {
-    if (cmd.type === 'M') {
-      if (current.length) contours.push({ id: newId(), closed: true, points: current });
-      current = [{ id: newId(), x: cmd.x, y: cmd.y, type: 'line', smooth: false }];
-      hasMove = true;
-    } else if (cmd.type === 'L') {
-      current.push({ id: newId(), x: cmd.x, y: cmd.y, type: 'line', smooth: false });
-    } else if (cmd.type === 'Q') {
-      current.push({ id: newId(), x: cmd.x1, y: cmd.y1, type: 'offcurve', smooth: false });
-      current.push({ id: newId(), x: cmd.x, y: cmd.y, type: 'qcurve', smooth: false });
-    } else if (cmd.type === 'C') {
-      current.push({ id: newId(), x: cmd.x1, y: cmd.y1, type: 'offcurve', smooth: false });
-      current.push({ id: newId(), x: cmd.x2, y: cmd.y2, type: 'offcurve', smooth: false });
-      current.push({ id: newId(), x: cmd.x, y: cmd.y, type: 'curve', smooth: false });
-    } else if (cmd.type === 'Z') {
-      if (current.length) {
-        contours.push({ id: newId(), closed: true, points: current });
-        current = [];
-      }
-    }
+    match(cmd)
+      .with({ type: 'M' }, (c) => {
+        if (current.length) contours.push({ id: newId(), closed: true, points: current });
+        current = [{ id: newId(), x: c.x, y: c.y, type: 'line', smooth: false }];
+        hasMove = true;
+      })
+      .with({ type: 'L' }, (c) => {
+        current.push({ id: newId(), x: c.x, y: c.y, type: 'line', smooth: false });
+      })
+      .with({ type: 'Q' }, (c) => {
+        current.push({ id: newId(), x: c.x1, y: c.y1, type: 'offcurve', smooth: false });
+        current.push({ id: newId(), x: c.x, y: c.y, type: 'qcurve', smooth: false });
+      })
+      .with({ type: 'C' }, (c) => {
+        current.push({ id: newId(), x: c.x1, y: c.y1, type: 'offcurve', smooth: false });
+        current.push({ id: newId(), x: c.x2, y: c.y2, type: 'offcurve', smooth: false });
+        current.push({ id: newId(), x: c.x, y: c.y, type: 'curve', smooth: false });
+      })
+      .with({ type: 'Z' }, () => {
+        if (current.length) {
+          contours.push({ id: newId(), closed: true, points: current });
+          current = [];
+        }
+      })
+      .exhaustive();
   }
   if (current.length) contours.push({ id: newId(), closed: hasMove, points: current });
 
@@ -198,21 +205,24 @@ function layerToPath(layer: Layer): opentype.Path {
         i += 1;
         continue;
       }
-      if (p.type === 'line') {
-        path.lineTo(p.x, p.y);
-        i += 1;
-      } else if (p.type === 'qcurve') {
-        const c = contour.points[i - 1]!;
-        path.quadraticCurveTo(c.x, c.y, p.x, p.y);
-        i += 1;
-      } else if (p.type === 'curve') {
-        const c1 = contour.points[i - 2]!;
-        const c2 = contour.points[i - 1]!;
-        path.curveTo(c1.x, c1.y, c2.x, c2.y, p.x, p.y);
-        i += 1;
-      } else {
-        i += 1; // skip raw offcurves; handled above
-      }
+      match(p.type)
+        .with('line', () => {
+          path.lineTo(p.x, p.y);
+        })
+        .with('qcurve', () => {
+          const c = contour.points[i - 1]!;
+          path.quadraticCurveTo(c.x, c.y, p.x, p.y);
+        })
+        .with('curve', () => {
+          const c1 = contour.points[i - 2]!;
+          const c2 = contour.points[i - 1]!;
+          path.curveTo(c1.x, c1.y, c2.x, c2.y, p.x, p.y);
+        })
+        .with('offcurve', () => {
+          // raw offcurves are consumed by the preceding curve/qcurve case
+        })
+        .exhaustive();
+      i += 1;
     }
     if (contour.closed) path.close();
   }
