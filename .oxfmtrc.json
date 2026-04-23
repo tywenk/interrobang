@@ -11,5 +11,11 @@
   "arrowParens": "always",
   "bracketSameLine": false,
   "bracketSpacing": true,
+  "sortImports": {
+    "internalPattern": ["^@interrobang/", "^~/", "^@/"],
+    "newlinesBetween": true,
+    "partitionByNewline": false,
+    "partitionByComment": false
+  },
   "ignorePatterns": ["docs/**", "**/*.md"]
 }

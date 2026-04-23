@@ -1,6 +1,6 @@
-import type { useNavigate } from '@tanstack/react-router';
-import type { BrowserStorageAdapter } from '@interrobang/storage';
 import type { FontIoClient } from '@interrobang/font-io';
+import type { BrowserStorageAdapter } from '@interrobang/storage';
+import type { useNavigate } from '@tanstack/react-router';
 
 interface ImportDeps {
   fontIo: FontIoClient;

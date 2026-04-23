@@ -1,7 +1,8 @@
-import { test, expect } from 'vitest';
 import { emptyFont, newId, type Font, type Glyph } from '@interrobang/core';
-import { fontToUfo, ufoToFont } from './ufo.js';
+import { test, expect } from 'vitest';
+
 import { parsePlist, writePlist } from './plist.js';
+import { fontToUfo, ufoToFont } from './ufo.js';
 
 function withGlyphs(font: Font, names: string[]): Font {
   const glyphs: { [id: string]: Glyph } = { ...font.glyphs };

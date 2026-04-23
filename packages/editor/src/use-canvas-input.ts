@@ -1,9 +1,10 @@
+import type { Glyph } from '@interrobang/core';
 import { useCallback, useLayoutEffect, useReducer, useRef } from 'react';
 import type { MouseEvent as ReactMouseEvent, MouseEventHandler, RefObject } from 'react';
-import type { Glyph } from '@interrobang/core';
+
+import type { LiveEditEvent } from './editor-canvas.js';
 import { hitTest } from './hit-test.js';
 import type { Viewport } from './viewport.js';
-import type { LiveEditEvent } from './editor-canvas.js';
 
 const HIT_TOLERANCE_PX = 8;
 

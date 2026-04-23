@@ -1,4 +1,5 @@
 import { test, expect } from 'vitest';
+
 import type { Command } from './command.js';
 import { UndoRedoStack } from './command.js';
 

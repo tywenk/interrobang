@@ -1,12 +1,13 @@
+import type { EditorCanvasHandle } from '@interrobang/editor';
+import { useNavigate } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import type { RefObject } from 'react';
-import { useNavigate } from '@tanstack/react-router';
 import { match } from 'ts-pattern';
-import type { EditorCanvasHandle } from '@interrobang/editor';
-import { useProjectStore } from '../stores/project-store';
-import { useEditorStore } from '../stores/editor-store';
+
 import { useAppServices } from '../app-context';
 import { exportOTF } from '../services/export-otf';
+import { useEditorStore } from '../stores/editor-store';
+import { useProjectStore } from '../stores/project-store';
 import { SHORTCUTS } from './shortcuts';
 
 interface Options {

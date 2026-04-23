@@ -1,4 +1,5 @@
 import { test, expect } from 'vitest';
+
 import type { Font, Glyph, Layer } from '../index.js';
 import { updateGlyph, replaceLayer, emptyFont } from './glyph-ops.js';
 

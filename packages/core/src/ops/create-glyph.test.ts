@@ -1,4 +1,5 @@
 import { test, expect } from 'vitest';
+
 import { createGlyph } from './glyph-ops.js';
 
 test('createGlyph with triangle starter produces one layer with a three-point closed contour', () => {

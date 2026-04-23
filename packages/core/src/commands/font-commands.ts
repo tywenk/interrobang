@@ -1,8 +1,8 @@
 import type { Font, Glyph, Point, PointType, Layer } from '../index.js';
-import type { Command } from './command.js';
-import type { MutationTarget } from './mutation-target.js';
 import { insertPoint, removePoint, movePoints, convertPointType } from '../ops/contour-ops.js';
 import { updateGlyph, replaceLayer } from '../ops/glyph-ops.js';
+import type { Command } from './command.js';
+import type { MutationTarget } from './mutation-target.js';
 
 function keyOf(t: MutationTarget): string {
   switch (t.kind) {

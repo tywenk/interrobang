@@ -1,7 +1,9 @@
-import { describe, it, expect } from 'vitest';
 import { createRequire } from 'node:module';
-import type { SqliteClient } from './worker/client.js';
+
+import { describe, it, expect } from 'vitest';
+
 import { runMigrations } from './migrations.js';
+import type { SqliteClient } from './worker/client.js';
 
 const require = createRequire(import.meta.url);
 interface DatabaseSync {

@@ -1,11 +1,12 @@
+import type { Glyph } from '@interrobang/core';
 import { useCallback, useImperativeHandle, useRef, forwardRef } from 'react';
 import type { RefObject } from 'react';
-import type { Glyph } from '@interrobang/core';
+
 import { drawLayer, previewMove } from './render.js';
-import type { Viewport } from './viewport.js';
-import { useCanvasSize } from './use-canvas-size.js';
 import { useCanvasInput } from './use-canvas-input.js';
 import type { DragState } from './use-canvas-input.js';
+import { useCanvasSize } from './use-canvas-size.js';
+import type { Viewport } from './viewport.js';
 
 export interface LiveEditEvent {
   kind: 'point-drag';

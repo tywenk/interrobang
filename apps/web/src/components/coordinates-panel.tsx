@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import type { EditorCanvasHandle, LiveEditEvent } from '@interrobang/editor';
+import { useEffect, useState } from 'react';
 
 interface Props {
   canvas: EditorCanvasHandle | null;

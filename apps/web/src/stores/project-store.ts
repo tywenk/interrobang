@@ -1,4 +1,3 @@
-import { create } from 'zustand';
 import {
   addGlyphCommand,
   createGlyph,
@@ -8,6 +7,8 @@ import {
   type Font,
   type MutationTarget,
 } from '@interrobang/core';
+import { create } from 'zustand';
+
 import { useEditorStore } from './editor-store';
 
 export interface OpenProject {

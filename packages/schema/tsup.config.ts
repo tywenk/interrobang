@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve as resolvePath } from 'node:path';
+
 import { defineConfig } from 'tsup';
 
 export default defineConfig({

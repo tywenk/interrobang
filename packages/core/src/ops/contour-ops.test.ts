@@ -1,4 +1,5 @@
 import { test, expect } from 'vitest';
+
 import type { Contour, Point } from '../contour.js';
 import { convertPointType, insertPoint, movePoints, removePoint } from './contour-ops.js';
 

@@ -1,6 +1,7 @@
 import { newId, type Font, type Glyph, type Layer, type MutationTarget } from '@interrobang/core';
-import type { SqliteClient } from '../worker/client.js';
+
 import type { ProjectSummary, StorageAdapter } from '../adapter.js';
+import type { SqliteClient } from '../worker/client.js';
 import { applyMutation } from './apply-mutation.js';
 import {
   deserializeExtraMetrics,

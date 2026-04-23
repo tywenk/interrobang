@@ -1,5 +1,3 @@
-import opentype from 'opentype.js';
-import { match } from 'ts-pattern';
 import {
   newId,
   type Font,
@@ -8,6 +6,8 @@ import {
   type Contour,
   type Point,
 } from '@interrobang/core';
+import opentype from 'opentype.js';
+import { match } from 'ts-pattern';
 
 /**
  * Parse an OpenType, TrueType, or OTF font into the internal {@link Font} model.

@@ -1,9 +1,10 @@
+import { match, P } from 'ts-pattern';
+import * as SQLite from 'wa-sqlite';
 /// <reference lib="webworker" />
 import SQLiteESMFactory from 'wa-sqlite/dist/wa-sqlite-async.mjs';
-import * as SQLite from 'wa-sqlite';
 import { AccessHandlePoolVFS } from 'wa-sqlite/src/examples/AccessHandlePoolVFS.js';
 import { IDBBatchAtomicVFS } from 'wa-sqlite/src/examples/IDBBatchAtomicVFS.js';
-import { match, P } from 'ts-pattern';
+
 import type { Request, Response, Row, SqlValue } from './protocol.js';
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;

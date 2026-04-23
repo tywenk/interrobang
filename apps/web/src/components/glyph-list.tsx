@@ -1,4 +1,3 @@
-import type { ComponentProps } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Sidebar,
@@ -13,8 +12,10 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from '@/components/ui/sidebar';
-import { useProjectStore } from '../stores/project-store';
+import type { ComponentProps } from 'react';
+
 import { useEditorStore } from '../stores/editor-store';
+import { useProjectStore } from '../stores/project-store';
 
 type Props = { projectId: string } & ComponentProps<typeof Sidebar>;
 

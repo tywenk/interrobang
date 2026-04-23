@@ -1,11 +1,13 @@
-import { describe, it, expect } from 'vitest';
 import { createRequire } from 'node:module';
+
 import { newId } from '@interrobang/core';
 import type { Font } from '@interrobang/core';
-import { getClientDDL } from '@interrobang/schema';
-import { BrowserStorageAdapter } from './browser-adapter.js';
-import type { SqliteClient } from '../worker/client.js';
 import type { MutationTarget } from '@interrobang/core';
+import { getClientDDL } from '@interrobang/schema';
+import { describe, it, expect } from 'vitest';
+
+import type { SqliteClient } from '../worker/client.js';
+import { BrowserStorageAdapter } from './browser-adapter.js';
 
 // node:sqlite is an experimental builtin — vite's resolver doesn't know about
 // it yet, so we load it through createRequire to skip the vite pipeline.

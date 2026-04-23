@@ -1,6 +1,7 @@
-import { createContext, useContext } from 'react';
-import type { BrowserStorageAdapter } from '@interrobang/storage';
 import type { FontIoClient } from '@interrobang/font-io';
+import type { BrowserStorageAdapter } from '@interrobang/storage';
+import { createContext, useContext } from 'react';
+
 import type { SaveLoop } from './services/save-loop';
 
 export interface AppServices {

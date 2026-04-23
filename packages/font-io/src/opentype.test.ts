@@ -1,7 +1,9 @@
-import { test, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { test, expect } from 'vitest';
+
 import { parseOTF, writeOTF } from './opentype.js';
 
 const here = dirname(fileURLToPath(import.meta.url));

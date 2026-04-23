@@ -1,4 +1,5 @@
 import { test, expect } from 'vitest';
+
 import { getClientDDL } from './client-ddl.js';
 
 test('client DDL omits the users table', () => {

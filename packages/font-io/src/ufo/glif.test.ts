@@ -1,4 +1,5 @@
 import { test, expect } from 'vitest';
+
 import { parseGlif, writeGlif } from './glif.js';
 
 const SAMPLE = `<?xml version="1.0" encoding="UTF-8"?>

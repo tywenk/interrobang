@@ -1,4 +1,5 @@
 import type { InferSelectModel, InferInsertModel } from 'drizzle-orm';
+
 import * as t from './tables.js';
 
 export const tables = t;

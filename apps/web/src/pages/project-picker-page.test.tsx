@@ -1,10 +1,11 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import type { FontIoClient } from '@interrobang/font-io';
+import type { BrowserStorageAdapter } from '@interrobang/storage';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
+import { render, screen } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+
 import { AppContext, type AppServices } from '../app-context';
 import { routeTree } from '../router';
-import type { BrowserStorageAdapter } from '@interrobang/storage';
-import type { FontIoClient } from '@interrobang/font-io';
 
 function renderAt(path: string, services: AppServices) {
   const router = createRouter({

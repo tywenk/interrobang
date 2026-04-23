@@ -1,6 +1,7 @@
 import { unionAffects } from '@interrobang/core';
 import type { MutationTarget } from '@interrobang/core';
 import type { BrowserStorageAdapter } from '@interrobang/storage';
+
 import { useProjectStore } from '../stores/project-store';
 
 const DEBOUNCE_MS = 800;

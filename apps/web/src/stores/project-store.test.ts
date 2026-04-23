@@ -1,4 +1,3 @@
-import { beforeEach, describe, expect, test } from 'vitest';
 import {
   addGlyphCommand,
   createGlyph,
@@ -7,6 +6,8 @@ import {
   UndoRedoStack,
   type Font,
 } from '@interrobang/core';
+import { beforeEach, describe, expect, test } from 'vitest';
+
 import { useProjectStore, type OpenProject } from './project-store';
 
 function seedProject(font: Font): OpenProject {

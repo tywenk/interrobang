@@ -1,8 +1,9 @@
-import path from 'node:path';
 import { readFile } from 'node:fs/promises';
-import { defineConfig, type Plugin } from 'vite';
-import react from '@vitejs/plugin-react';
+import path from 'node:path';
+
 import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
+import { defineConfig, type Plugin } from 'vite';
 
 function sqlTextImportPlugin(): Plugin {
   return {

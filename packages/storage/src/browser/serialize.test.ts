@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
 import type { Layer } from '@interrobang/core';
+import { describe, it, expect } from 'vitest';
+
 import {
   BLOB_VERSION,
   deserializeExtraMetrics,

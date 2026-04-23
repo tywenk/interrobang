@@ -1,5 +1,5 @@
-import { XMLParser } from 'fast-xml-parser';
 import { newId, type Contour, type Point, type PointType } from '@interrobang/core';
+import { XMLParser } from 'fast-xml-parser';
 
 /**
  * The subset of GLIF 2 data that this package reads and writes.

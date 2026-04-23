@@ -1,16 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { projectRoute } from '../router';
-import { useAppServices } from '../app-context';
-import { useProjectStore } from '../stores/project-store';
-import { EditorShell } from '../components/editor-shell';
-import { EditorMenuBar } from '../components/editor-menu-bar';
-import { TabBar } from '../components/tab-bar';
-import { GlyphList } from '../components/glyph-list';
-import { CoordinatesPanel } from '../components/coordinates-panel';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
-import { useEditorKeyboardShortcuts } from '../hooks/use-keyboard-shortcuts';
-import { useAutoSave } from '../hooks/use-auto-save';
 import type { EditorCanvasHandle } from '@interrobang/editor';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+import { useAppServices } from '../app-context';
+import { CoordinatesPanel } from '../components/coordinates-panel';
+import { EditorMenuBar } from '../components/editor-menu-bar';
+import { EditorShell } from '../components/editor-shell';
+import { GlyphList } from '../components/glyph-list';
+import { TabBar } from '../components/tab-bar';
+import { useAutoSave } from '../hooks/use-auto-save';
+import { useEditorKeyboardShortcuts } from '../hooks/use-keyboard-shortcuts';
+import { projectRoute } from '../router';
+import { useProjectStore } from '../stores/project-store';
 
 export function EditorPage() {
   const { projectId } = projectRoute.useParams();

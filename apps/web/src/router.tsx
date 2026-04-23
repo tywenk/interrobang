@@ -1,6 +1,6 @@
-import { createRootRoute, createRoute, createRouter, Outlet } from '@tanstack/react-router';
-import { ProjectPickerPage } from '@/pages/project-picker-page';
 import { EditorPage } from '@/pages/editor-page';
+import { ProjectPickerPage } from '@/pages/project-picker-page';
+import { createRootRoute, createRoute, createRouter, Outlet } from '@tanstack/react-router';
 
 export const rootRoute = createRootRoute({ component: () => <Outlet /> });
 

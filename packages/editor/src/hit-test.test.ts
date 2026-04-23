@@ -1,7 +1,8 @@
-import { test, expect } from 'vitest';
 import type { Layer } from '@interrobang/core';
-import { Viewport } from './viewport.js';
+import { test, expect } from 'vitest';
+
 import { hitTest } from './hit-test.js';
+import { Viewport } from './viewport.js';
 
 const layer: Layer = {
   id: 'l1',

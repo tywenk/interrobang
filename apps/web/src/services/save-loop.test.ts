@@ -1,8 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { UndoRedoStack, type Font, type MutationTarget } from '@interrobang/core';
 import type { BrowserStorageAdapter } from '@interrobang/storage';
-import { SaveLoop } from './save-loop';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { useProjectStore } from '../stores/project-store';
+import { SaveLoop } from './save-loop';
 
 interface Call {
   kind: 'applyMutation' | 'saveFont';

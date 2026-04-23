@@ -1,10 +1,11 @@
-import { describe, test, expect, vi } from 'vitest';
+import type { Glyph } from '@interrobang/core';
 import { renderHook, act } from '@testing-library/react';
 import { useRef } from 'react';
-import type { Glyph } from '@interrobang/core';
-import { Viewport } from './viewport.js';
-import { useCanvasInput } from './use-canvas-input.js';
+import { describe, test, expect, vi } from 'vitest';
+
 import type { LiveEditEvent } from './editor-canvas.js';
+import { useCanvasInput } from './use-canvas-input.js';
+import { Viewport } from './viewport.js';
 
 function makeGlyph(): Glyph {
   return {

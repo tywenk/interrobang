@@ -1,7 +1,8 @@
-import path from 'node:path';
 import { readFile } from 'node:fs/promises';
-import { defineConfig, type Plugin } from 'vitest/config';
+import path from 'node:path';
+
 import react from '@vitejs/plugin-react';
+import { defineConfig, type Plugin } from 'vitest/config';
 
 function sqlTextImportPlugin(): Plugin {
   return {

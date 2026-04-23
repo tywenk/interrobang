@@ -1,8 +1,9 @@
+import type { Glyph } from '@interrobang/core';
 import { useCallback, useLayoutEffect, useRef } from 'react';
 import type { RefObject } from 'react';
-import type { Glyph } from '@interrobang/core';
-import { Viewport } from './viewport.js';
+
 import { drawLayer } from './render.js';
+import { Viewport } from './viewport.js';
 
 const INITIAL_SIZE = { width: 800, height: 600 };
 

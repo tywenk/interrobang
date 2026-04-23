@@ -1,5 +1,6 @@
 import type { Contour, Glyph, Layer } from '@interrobang/core';
 import { match } from 'ts-pattern';
+
 import type { Viewport } from './viewport.js';
 
 export interface RenderTheme {

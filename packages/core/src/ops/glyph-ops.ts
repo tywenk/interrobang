@@ -1,5 +1,6 @@
-import type { Font, Glyph, Layer } from '../index.js';
 import { nanoid as newId } from 'nanoid';
+
+import type { Font, Glyph, Layer } from '../index.js';
 
 export interface CreateGlyphInput {
   name: string;

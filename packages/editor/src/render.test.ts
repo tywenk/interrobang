@@ -1,7 +1,8 @@
-import { test, expect, vi } from 'vitest';
 import type { Layer } from '@interrobang/core';
-import { Viewport } from './viewport.js';
+import { test, expect, vi } from 'vitest';
+
 import { drawLayer } from './render.js';
+import { Viewport } from './viewport.js';
 
 function fakeCtx() {
   const calls: string[] = [];

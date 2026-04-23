@@ -1,4 +1,5 @@
 import type { Font } from '@interrobang/core';
+
 import type { Request, Response } from './protocol.js';
 
 type RequestWithoutId<K extends Request['kind']> = Omit<Extract<Request, { kind: K }>, 'id'>;

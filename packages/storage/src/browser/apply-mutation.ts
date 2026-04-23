@@ -1,4 +1,5 @@
 import type { Font, MutationTarget } from '@interrobang/core';
+
 import type { SqliteClient } from '../worker/client.js';
 import { serializeExtraMetrics, serializeGlyph, serializeLayer } from './serialize.js';
 

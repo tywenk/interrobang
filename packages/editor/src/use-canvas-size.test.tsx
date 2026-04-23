@@ -1,7 +1,8 @@
-import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
+import type { Glyph } from '@interrobang/core';
 import { renderHook, act } from '@testing-library/react';
 import { useRef } from 'react';
-import type { Glyph } from '@interrobang/core';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
+
 import { useCanvasSize } from './use-canvas-size.js';
 
 type ROCallback = (entries: Array<{ contentRect: { width: number; height: number } }>) => void;

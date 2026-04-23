@@ -1,6 +1,4 @@
-import type { RefObject } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import type { EditorCanvasHandle } from '@interrobang/editor';
+import { Kbd, KbdGroup } from '@/components/ui/kbd';
 import {
   Menubar,
   MenubarContent,
@@ -12,13 +10,16 @@ import {
   MenubarShortcut,
   MenubarTrigger,
 } from '@/components/ui/menubar';
-import { Kbd, KbdGroup } from '@/components/ui/kbd';
 import { useSidebar } from '@/components/ui/sidebar';
-import { useProjectStore } from '../stores/project-store';
-import { useEditorStore } from '../stores/editor-store';
+import type { EditorCanvasHandle } from '@interrobang/editor';
+import { useNavigate } from '@tanstack/react-router';
+import type { RefObject } from 'react';
+
 import { useAppServices } from '../app-context';
-import { importFontFile } from '../services/import-font-file';
 import { exportOTF } from '../services/export-otf';
+import { importFontFile } from '../services/import-font-file';
+import { useEditorStore } from '../stores/editor-store';
+import { useProjectStore } from '../stores/project-store';
 
 interface Props {
   projectId: string;

@@ -1,7 +1,8 @@
-import { Link, useNavigate } from '@tanstack/react-router';
-import { useProjectStore } from '../stores/project-store';
-import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
+import { SidebarTrigger } from '@/components/ui/sidebar';
+import { Link, useNavigate } from '@tanstack/react-router';
+
+import { useProjectStore } from '../stores/project-store';
 
 export function TabBar({ activeId }: { activeId: string }) {
   const order = useProjectStore((s) => s.openOrder);

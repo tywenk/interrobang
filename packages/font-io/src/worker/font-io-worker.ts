@@ -7,6 +7,7 @@
  * forwarded as `{ kind: 'err', message }` so the client's promise rejects.
  */
 import { match } from 'ts-pattern';
+
 import { parseOTF, writeOTF } from '../opentype.js';
 import { fontToUfo, ufoToFont } from '../ufo/ufo.js';
 import type { Request, Response } from './protocol.js';

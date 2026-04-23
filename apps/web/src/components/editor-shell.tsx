@@ -1,11 +1,12 @@
-import { useMemo } from 'react';
-import type { Ref } from 'react';
+import { Button } from '@/components/ui/button';
 import type { Glyph } from '@interrobang/core';
 import { movePointsCommand, insertPointCommand, newId } from '@interrobang/core';
 import { EditorCanvas, type EditorCanvasHandle } from '@interrobang/editor';
-import { useProjectStore } from '../stores/project-store';
+import { useMemo } from 'react';
+import type { Ref } from 'react';
+
 import { useEditorStore } from '../stores/editor-store';
-import { Button } from '@/components/ui/button';
+import { useProjectStore } from '../stores/project-store';
 
 interface Props {
   projectId: string;
