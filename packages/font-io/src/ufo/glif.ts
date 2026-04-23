@@ -1,10 +1,22 @@
 import { XMLParser } from 'fast-xml-parser';
 import { newId, type Contour, type Point, type PointType } from '@interrobang/core';
 
+/**
+ * The subset of GLIF 2 data that this package reads and writes.
+ *
+ * Advances, components, anchors, images, and lib data are not currently
+ * carried through.
+ *
+ * @see https://unifiedfontobject.org/versions/ufo3/glyphs/glif/
+ */
 export interface GlifGlyph {
+  /** Glyph name (the `name` attribute on the root `<glyph>` element). */
   name: string;
+  /** Horizontal advance width in font units. Defaults to 500 when absent. */
   advanceWidth: number;
+  /** First `<unicode>` hex value as a codepoint, or `null` if the glyph has no codepoint. */
   unicodeCodepoint: number | null;
+  /** Contours in the `<outline>` element. */
   contours: Contour[];
 }
 
@@ -32,6 +44,13 @@ interface GlifPointTree {
   '@_smooth'?: string;
 }
 
+/**
+ * Parse a GLIF 2 XML document into a {@link GlifGlyph}.
+ *
+ * @param xml - Full GLIF source, including the XML declaration.
+ * @returns Parsed glyph.
+ * @see https://unifiedfontobject.org/versions/ufo3/glyphs/glif/
+ */
 export function parseGlif(xml: string): GlifGlyph {
   const tree = parser.parse(xml) as { glyph: GlifTree };
   const g = tree.glyph;
@@ -59,6 +78,15 @@ export function parseGlif(xml: string): GlifGlyph {
   };
 }
 
+/**
+ * Serialize a {@link GlifGlyph} as GLIF 2 XML (`format="2"`).
+ *
+ * The output is deterministic and tab-indented. `type="offcurve"` is omitted
+ * on points (the GLIF default), and `smooth="yes"` is only emitted when true.
+ *
+ * @param g - Glyph to serialize.
+ * @returns GLIF XML source ending in a trailing newline.
+ */
 export function writeGlif(g: GlifGlyph): string {
   const lines: string[] = [];
   lines.push('<?xml version="1.0" encoding="UTF-8"?>');

@@ -1,4 +1,11 @@
 /// <reference lib="webworker" />
+/**
+ * Dedicated Web Worker entry for font-io.
+ *
+ * Receives {@link Request} messages, invokes the appropriate pure function,
+ * and posts back a {@link Response}. All thrown errors are caught and
+ * forwarded as `{ kind: 'err', message }` so the client's promise rejects.
+ */
 import { parseOTF, writeOTF } from '../opentype.js';
 import { fontToUfo, ufoToFont } from '../ufo/ufo.js';
 import type { Request, Response } from './protocol.js';

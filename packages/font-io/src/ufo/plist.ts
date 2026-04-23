@@ -1,5 +1,19 @@
 import { XMLParser } from 'fast-xml-parser';
 
+/**
+ * In-memory representation of an Apple Property List value.
+ *
+ * Maps each plist type to its closest JavaScript equivalent:
+ * - `<string>` → `string`
+ * - `<integer>` / `<real>` → `number`
+ * - `<true/>` / `<false/>` → `boolean`
+ * - `<date>` → `Date`
+ * - `<data>` → `Uint8Array`
+ * - `<array>` → `PlistValue[]`
+ * - `<dict>` → `{ [k: string]: PlistValue }`
+ *
+ * @see https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/PropertyLists/
+ */
 export type PlistValue =
   | string
   | number
@@ -18,6 +32,13 @@ const parser = new XMLParser({
   processEntities: true,
 });
 
+/**
+ * Parse an XML-format Apple Property List into a {@link PlistValue}.
+ *
+ * @param xml - Full plist XML including the `<?xml?>` declaration and DOCTYPE.
+ * @returns The decoded top-level value (typically a `dict` or `array`).
+ * @throws If the document is not a plist, is empty, or contains an unknown tag.
+ */
 export function parsePlist(xml: string): PlistValue {
   const tree = parser.parse(xml) as unknown[];
   const plistNode = findNode(tree, 'plist');
@@ -120,6 +141,15 @@ function base64Encode(bytes: Uint8Array): string {
   return btoa(bin);
 }
 
+/**
+ * Serialize a {@link PlistValue} as Apple Property List 1.0 XML.
+ *
+ * The output includes the XML declaration, DOCTYPE, and is tab-indented for
+ * readability. Numbers that are not integers are emitted as `<real>`.
+ *
+ * @param value - Any plist value; dicts and arrays are walked recursively.
+ * @returns Full plist XML ending in a trailing newline.
+ */
 export function writePlist(value: PlistValue): string {
   const body = encodeXml(value, 1);
   return (

@@ -1,6 +1,19 @@
 import opentype from 'opentype.js';
 import { newId, type Font, type Glyph, type Layer, type Contour, type Point } from '@interrobang/core';
 
+/**
+ * Parse an OpenType, TrueType, or OTF font into the internal {@link Font} model.
+ *
+ * @param bytes - Raw font binary (e.g. from `fetch().arrayBuffer()` or a file input).
+ * @returns A `Font` with a single default master. Each OpenType glyph becomes
+ *   a `Glyph` whose `layers[0]` holds the converted outline.
+ * @throws If `opentype.js` cannot parse the input (malformed or unsupported table).
+ * @example
+ * ```ts
+ * const bytes = await fetch('/MyFont.ttf').then((r) => r.arrayBuffer());
+ * const font = parseOTF(bytes);
+ * ```
+ */
 export function parseOTF(bytes: ArrayBuffer): Font {
   const ot = opentype.parse(bytes);
   const masterId = newId();
@@ -44,6 +57,7 @@ export function parseOTF(bytes: ArrayBuffer): Font {
   };
 }
 
+/** Convert an `opentype.js` path into a {@link Layer} of typed points. */
 function pathToLayer(path: opentype.Path, masterId: string): Layer {
   const contours: Contour[] = [];
   let current: Point[] = [];
@@ -75,6 +89,17 @@ function pathToLayer(path: opentype.Path, masterId: string): Layer {
   return { id: newId(), masterId, contours, components: [], anchors: [] };
 }
 
+/**
+ * Serialize a {@link Font} as an OpenType binary.
+ *
+ * A `.notdef` glyph is always emitted first, as required by the OpenType spec;
+ * any existing `.notdef` in `font.glyphOrder` is skipped to avoid duplication.
+ *
+ * @param font - Font from the `@interrobang/core` model.
+ * @returns ArrayBuffer containing a valid `.otf`/`.ttf` binary.
+ * @remarks Only `layers[0]` is exported for each glyph — multi-master export
+ *   is not yet supported.
+ */
 export function writeOTF(font: Font): ArrayBuffer {
   const otGlyphs: opentype.Glyph[] = [];
   // .notdef is required as the first glyph
@@ -109,6 +134,7 @@ export function writeOTF(font: Font): ArrayBuffer {
   return ot.toArrayBuffer();
 }
 
+/** Convert a {@link Layer}'s contours into an `opentype.js` path. */
 function layerToPath(layer: Layer): opentype.Path {
   const path = new opentype.Path();
   for (const contour of layer.contours) {
