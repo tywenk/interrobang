@@ -11,8 +11,10 @@ export function TabBar({ activeId }: { activeId: string }) {
   const nav = useNavigate();
 
   return (
-    <div className="flex items-center gap-1 border-b border-border bg-card px-2 h-9">
-      <SidebarTrigger className="-ml-1" />
+    <div className="flex items-center border-b border-border bg-card h-9">
+      <div className="flex w-[39px] shrink-0 items-center justify-center">
+        <SidebarTrigger className="size-8" />
+      </div>
       <Separator orientation="vertical" className="mr-1" />
       {order.map((id) => {
         const p = projects[id];

@@ -3,8 +3,9 @@ import { useCallback, useImperativeHandle, useRef, forwardRef } from 'react';
 import type { RefObject } from 'react';
 
 import { drawLayer, previewMove } from './render.js';
+import type { Selection } from './selection.js';
 import { useCanvasInput } from './use-canvas-input.js';
-import type { DragState } from './use-canvas-input.js';
+import type { CanvasTool, DragState } from './use-canvas-input.js';
 import { useCanvasSize } from './use-canvas-size.js';
 import type { Viewport } from './viewport.js';
 
@@ -22,17 +23,30 @@ export interface EditorCanvasHandle {
   on(event: 'liveEdit', cb: LiveEditListener): () => void;
 }
 
+export type { CanvasTool };
+
 export interface EditorCanvasProps {
   glyph: Glyph;
-  selection: ReadonlySet<string>;
-  tool: 'select' | 'pen';
+  selection: Selection;
+  tool: CanvasTool;
   onCommitMove?: (pointIds: readonly string[], dx: number, dy: number) => void;
-  onSelectionChange?: (ids: ReadonlySet<string>) => void;
+  onSelectionChange?: (next: Selection) => void;
   onPenClick?: (fontX: number, fontY: number) => void;
+  onConvertLineSegment?: (contourId: string, toAnchorId: string) => void;
+  onInsertAnchorOnSegment?: (contourId: string, segmentIndex: number, t: number) => void;
 }
 
 export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(function EditorCanvas(
-  { glyph, selection, tool, onCommitMove, onSelectionChange, onPenClick },
+  {
+    glyph,
+    selection,
+    tool,
+    onCommitMove,
+    onSelectionChange,
+    onPenClick,
+    onConvertLineSegment,
+    onInsertAnchorOnSegment,
+  },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -60,7 +74,12 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
         ? previewMove(glyphRef.current, drag.pointIds, drag.lastDx, drag.lastDy)
         : glyphRef.current;
     const layer = drawnGlyph.layers[0];
-    if (layer) drawLayer(ctx, layer, vp, selectionRef.current);
+    if (!layer) return;
+    const marquee =
+      drag && drag.kind === 'marquee'
+        ? { sx0: drag.startSx, sy0: drag.startSy, sx1: drag.currentSx, sy1: drag.currentSy }
+        : undefined;
+    drawLayer(ctx, layer, vp, { selection: selectionRef.current, marquee });
   }, []);
 
   const { viewport, scheduleDraw, fitToGlyph } = useCanvasSize({
@@ -84,6 +103,8 @@ export const EditorCanvas = forwardRef<EditorCanvasHandle, EditorCanvasProps>(fu
     onSelectionChange,
     onCommitMove,
     onPenClick,
+    onConvertLineSegment,
+    onInsertAnchorOnSegment,
     emitLive,
     scheduleDraw,
   });

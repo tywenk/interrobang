@@ -13,5 +13,25 @@ export {
   addGlyphCommand,
   unionAffects,
 } from './commands/font-commands.js';
+export {
+  convertLineSegmentToCurveCommand,
+  insertAnchorOnSegmentCommand,
+} from './commands/segment-commands.js';
+export type {
+  ConvertLineSegmentToCurveArgs,
+  InsertAnchorOnSegmentArgs,
+} from './commands/segment-commands.js';
 export { emptyFont, updateGlyph, replaceLayer, createGlyph } from './ops/glyph-ops.js';
 export type { CreateGlyphInput } from './ops/glyph-ops.js';
+export {
+  adjacentOffcurves,
+  cubicAt,
+  flattenSegment,
+  quadraticAt,
+  SEGMENT_FLATTEN_STEPS,
+  segmentsOf,
+  splitCubicAt,
+  splitQuadraticAt,
+} from './ops/contour-segments.js';
+export type { Segment, Vec2 } from './ops/contour-segments.js';
+export { insertPoint, removePoint, movePoints, convertPointType } from './ops/contour-ops.js';

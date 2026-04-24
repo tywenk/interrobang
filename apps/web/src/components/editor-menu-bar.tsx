@@ -18,6 +18,7 @@ import type { RefObject } from 'react';
 import { useAppServices } from '../app-context';
 import { exportOTF } from '../services/export-otf';
 import { importFontFile } from '../services/import-font-file';
+import type { Tool } from '../stores/editor-store';
 import { useEditorStore } from '../stores/editor-store';
 import { useProjectStore } from '../stores/project-store';
 
@@ -71,11 +72,7 @@ export function EditorMenuBar({ projectId, canvasRef }: Props) {
   }
   function onAddGlyph() {
     if (!hasProj) return;
-    const input = window.prompt('Character for the new glyph:');
-    if (input === null) return;
-    const char = input.trim();
-    if (!char) return;
-    useProjectStore.getState().addGlyph(projectId, char);
+    useEditorStore.getState().requestAddGlyph(projectId);
   }
   function onFitToView() {
     canvasRef.current?.fitToView();
@@ -133,7 +130,7 @@ export function EditorMenuBar({ projectId, canvasRef }: Props) {
         <MenubarContent>
           <MenubarRadioGroup
             value={tool}
-            onValueChange={(v) => useEditorStore.getState().setTool(v as 'select' | 'pen')}
+            onValueChange={(v) => useEditorStore.getState().setTool(v as Tool)}
           >
             <MenubarRadioItem value="select">
               Select
@@ -142,6 +139,10 @@ export function EditorMenuBar({ projectId, canvasRef }: Props) {
             <MenubarRadioItem value="pen">
               Pen
               <MacShortcut keys={['P']} />
+            </MenubarRadioItem>
+            <MenubarRadioItem value="add-point">
+              Add point
+              <MacShortcut keys={['A']} />
             </MenubarRadioItem>
           </MenubarRadioGroup>
         </MenubarContent>

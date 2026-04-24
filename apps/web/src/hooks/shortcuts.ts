@@ -63,4 +63,9 @@ export const SHORTCUTS: readonly ShortcutBinding[] = [
     matches: (e, mod) => !mod && (e.key === 'p' || e.key === 'P'),
     action: { kind: 'set-tool', tool: 'pen' },
   },
+  {
+    id: 'tool-add-point',
+    matches: (e, mod) => !mod && (e.key === 'a' || e.key === 'A'),
+    action: { kind: 'set-tool', tool: 'add-point' },
+  },
 ];

@@ -3,11 +3,13 @@ import type { EditorCanvasHandle } from '@interrobang/editor';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAppServices } from '../app-context';
+import { AddGlyphDialog } from '../components/add-glyph-dialog';
 import { CoordinatesPanel } from '../components/coordinates-panel';
 import { EditorMenuBar } from '../components/editor-menu-bar';
 import { EditorShell } from '../components/editor-shell';
 import { GlyphList } from '../components/glyph-list';
 import { TabBar } from '../components/tab-bar';
+import { ToolSidebar } from '../components/tool-sidebar';
 import { useAutoSave } from '../hooks/use-auto-save';
 import { useEditorKeyboardShortcuts } from '../hooks/use-keyboard-shortcuts';
 import { projectRoute } from '../router';
@@ -49,12 +51,14 @@ export function EditorPage() {
         <EditorMenuBar projectId={projectId} canvasRef={canvasRef} />
         <TabBar activeId={projectId} />
         <div className="flex min-h-0 flex-1">
+          <ToolSidebar />
           <div className="relative min-h-0 min-w-0 flex-1">
             <EditorShell projectId={projectId} canvasHandleRef={setCanvas} />
           </div>
           <CoordinatesPanel canvas={canvasHandle} />
         </div>
       </SidebarInset>
+      <AddGlyphDialog />
     </SidebarProvider>
   );
 }

@@ -1,7 +1,13 @@
 import { Button } from '@/components/ui/button';
 import type { Glyph } from '@interrobang/core';
-import { movePointsCommand, insertPointCommand, newId } from '@interrobang/core';
-import { EditorCanvas, type EditorCanvasHandle } from '@interrobang/editor';
+import {
+  convertLineSegmentToCurveCommand,
+  insertAnchorOnSegmentCommand,
+  insertPointCommand,
+  movePointsCommand,
+  newId,
+} from '@interrobang/core';
+import { EditorCanvas, EMPTY_SELECTION, type EditorCanvasHandle } from '@interrobang/editor';
 import { useMemo } from 'react';
 import type { Ref } from 'react';
 
@@ -12,8 +18,6 @@ interface Props {
   projectId: string;
   canvasHandleRef?: Ref<EditorCanvasHandle>;
 }
-
-const EMPTY_SELECTION: ReadonlySet<string> = new Set();
 
 export function EditorShell({ projectId, canvasHandleRef }: Props) {
   const proj = useProjectStore((s) => s.openProjects[projectId]);
@@ -70,7 +74,7 @@ export function EditorShell({ projectId, canvasHandleRef }: Props) {
             }),
           );
         }}
-        onSelectionChange={(ids) => setSelection(currentGlyph.id, ids)}
+        onSelectionChange={(sel) => setSelection(currentGlyph.id, sel)}
         onPenClick={(fx, fy) => {
           const layer = currentGlyph.layers[0];
           if (!layer) return;
@@ -84,6 +88,33 @@ export function EditorShell({ projectId, canvasHandleRef }: Props) {
               contourId: contour.id,
               index: contour.points.length,
               point: { id: newId(), x: fx, y: fy, type: 'line', smooth: false },
+            }),
+          );
+        }}
+        onConvertLineSegment={(contourId, toAnchorId) => {
+          const layer = currentGlyph.layers[0];
+          if (!layer) return;
+          applyCommand(
+            projectId,
+            convertLineSegmentToCurveCommand({
+              glyphId: currentGlyph.id,
+              layerId: layer.id,
+              contourId,
+              toAnchorId,
+            }),
+          );
+        }}
+        onInsertAnchorOnSegment={(contourId, segmentIndex, t) => {
+          const layer = currentGlyph.layers[0];
+          if (!layer) return;
+          applyCommand(
+            projectId,
+            insertAnchorOnSegmentCommand({
+              glyphId: currentGlyph.id,
+              layerId: layer.id,
+              contourId,
+              segmentIndex,
+              t,
             }),
           );
         }}

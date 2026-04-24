@@ -64,13 +64,7 @@ export function GlyphList({ projectId, ...props }: Props) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => {
-            const input = window.prompt('Character for the new glyph:');
-            if (input === null) return;
-            const char = input.trim();
-            if (!char) return;
-            useProjectStore.getState().addGlyph(projectId, char);
-          }}
+          onClick={() => useEditorStore.getState().requestAddGlyph(projectId)}
         >
           + Add glyph
         </Button>

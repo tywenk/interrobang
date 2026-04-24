@@ -48,11 +48,7 @@ export function useEditorKeyboardShortcuts(projectId: string, { canvasRef }: Opt
           canvasRef.current?.fitToView();
         })
         .with({ kind: 'add-glyph' }, () => {
-          const input = window.prompt('Character for the new glyph:');
-          if (input === null) return;
-          const char = input.trim();
-          if (!char) return;
-          useProjectStore.getState().addGlyph(projectId, char);
+          useEditorStore.getState().requestAddGlyph(projectId);
         })
         .with({ kind: 'set-tool' }, (a) => useEditorStore.getState().setTool(a.tool))
         .exhaustive();
