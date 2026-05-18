@@ -84,10 +84,10 @@ const cubicLayer: Layer = {
 };
 
 describe('drawLayer', () => {
-  test('issues moveTo + lineTo for a triangle contour (back-compat with legacy set signature)', () => {
+  test('issues moveTo + lineTo for a triangle contour', () => {
     const vp = new Viewport({ canvasWidth: 800, canvasHeight: 600 });
     const { ctx, calls } = fakeCtx();
-    drawLayer(ctx, triangleLayer, vp, new Set());
+    drawLayer(ctx, triangleLayer, vp);
     expect(calls.some((c) => c.startsWith('moveTo'))).toBe(true);
     expect(calls.filter((c) => c.startsWith('lineTo')).length).toBeGreaterThanOrEqual(2);
     expect(calls).toContain('closePath');

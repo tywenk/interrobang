@@ -1,39 +1,15 @@
 import { nanoid as newId } from 'nanoid';
 
-import type { Contour, Font, Layer, Point } from '../index.js';
+import type { Contour, Font, Point } from '../index.js';
 import {
-  quadraticAt,
   segmentsOf,
   splitCubicAt,
   splitQuadraticAt,
   type Segment,
 } from '../ops/contour-segments.js';
-import { updateGlyph } from '../ops/glyph-ops.js';
 import type { Command } from './command.js';
+import { withContour, type ContourTarget } from './contour-target.js';
 import type { MutationTarget } from './mutation-target.js';
-
-interface ContourTarget {
-  readonly glyphId: string;
-  readonly layerId: string;
-  readonly contourId: string;
-}
-
-function withContour(font: Font, t: ContourTarget, fn: (c: Contour) => Contour): Font {
-  return updateGlyph(font, t.glyphId, (g) => {
-    const layer = g.layers.find((l) => l.id === t.layerId);
-    if (!layer) return g;
-    const contour = layer.contours.find((c) => c.id === t.contourId);
-    if (!contour) return g;
-    const next = fn(contour);
-    if (next === contour) return g;
-    const layers: readonly Layer[] = g.layers.map((l) =>
-      l.id === t.layerId
-        ? { ...l, contours: l.contours.map((c) => (c.id === t.contourId ? next : c)) }
-        : l,
-    );
-    return { ...g, layers };
-  });
-}
 
 export interface ConvertLineSegmentToCurveArgs extends ContourTarget {
   /** Anchor that closes the line segment being converted. */
@@ -279,9 +255,6 @@ function splitSegmentPoints(
     { x: to.x, y: to.y },
     tt,
   );
-  // Verify qcurveAt matches S (no-op but keeps the import live if someone
-  // refactors splitQuadraticAt): the split value equals the point-on-curve.
-  void quadraticAt;
   // Replace [from, h, to] with [from, q0', S(qcurve), q1', to].
   return [
     from,

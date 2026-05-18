@@ -38,19 +38,13 @@ export interface DrawLayerOptions {
 /**
  * Paint a full layer: outline paths, then handles (only on selected anchors),
  * then anchors, then the marquee overlay.
- *
- * Overload accepts the legacy signature `drawLayer(ctx, layer, vp, Set<id>)`
- * where the set is treated as the selected-anchor ids.
  */
 export function drawLayer(
   ctx: CanvasRenderingContext2D,
   layer: Layer,
   viewport: Viewport,
-  optsOrSelection?: DrawLayerOptions | ReadonlySet<string>,
+  opts: DrawLayerOptions = {},
 ): void {
-  const opts: DrawLayerOptions = isLegacySelection(optsOrSelection)
-    ? { selection: { anchors: optsOrSelection, handles: new Set() } }
-    : (optsOrSelection ?? {});
   const theme = opts.theme ?? DEFAULT_THEME;
   const selection = opts.selection ?? EMPTY_SELECTION;
 
@@ -60,12 +54,6 @@ export function drawLayer(
   for (const contour of layer.contours)
     drawContourAnchors(ctx, contour, viewport, selection, theme);
   if (opts.marquee) drawMarquee(ctx, opts.marquee, theme);
-}
-
-function isLegacySelection(
-  x: DrawLayerOptions | ReadonlySet<string> | undefined,
-): x is ReadonlySet<string> {
-  return x instanceof Set;
 }
 
 function drawContourPath(
