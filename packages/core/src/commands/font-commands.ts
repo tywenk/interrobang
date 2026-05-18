@@ -1,7 +1,7 @@
-import type { Font, Glyph, Point, PointType, Layer } from '../index.js';
+import type { Font, Glyph, Point, PointType } from '../index.js';
 import { insertPoint, removePoint, movePoints, convertPointType } from '../ops/contour-ops.js';
-import { updateGlyph, replaceLayer } from '../ops/glyph-ops.js';
 import type { Command } from './command.js';
+import { withContour, type ContourTarget } from './contour-target.js';
 import type { MutationTarget } from './mutation-target.js';
 
 function keyOf(t: MutationTarget): string {
@@ -33,33 +33,6 @@ export function unionAffects(
     }
   }
   return out;
-}
-
-interface ContourTarget {
-  glyphId: string;
-  layerId: string;
-  contourId: string;
-}
-
-function withContour(
-  font: Font,
-  t: ContourTarget,
-  fn: (c: Layer['contours'][number]) => Layer['contours'][number],
-): Font {
-  return updateGlyph(font, t.glyphId, (g) => {
-    const layer = g.layers.find((l) => l.id === t.layerId);
-    if (!layer) return g;
-    const contour = layer.contours.find((c) => c.id === t.contourId);
-    if (!contour) return g;
-    const next = fn(contour);
-    if (next === contour) return g;
-    const layers = g.layers.map((l) =>
-      l.id === t.layerId
-        ? { ...l, contours: l.contours.map((c) => (c.id === t.contourId ? next : c)) }
-        : l,
-    );
-    return replaceLayer(g, layers.find((l) => l.id === t.layerId)!);
-  });
 }
 
 export interface MovePointsArgs extends ContourTarget {
